@@ -1,0 +1,41 @@
+{
+  "url": "https://eodhd.com/api/eod/AAPL.US?from=2024-01-02&to=2024-01-05&period=d&api_token=69099e18237790.26487595&fmt=json",
+  "data": [
+    {
+      "date": "2024-01-02",
+      "open": 187.15,
+      "high": 188.44,
+      "low": 183.89,
+      "close": 185.64,
+      "adjusted_close": 184.0815,
+      "volume": 82488700
+    },
+    {
+      "date": "2024-01-03",
+      "open": 184.22,
+      "high": 185.88,
+      "low": 183.43,
+      "close": 184.25,
+      "adjusted_close": 182.7032,
+      "volume": 58414500
+    },
+    {
+      "date": "2024-01-04",
+      "open": 182.15,
+      "high": 183.09,
+      "low": 180.88,
+      "close": 181.91,
+      "adjusted_close": 180.3828,
+      "volume": 71983600
+    },
+    {
+      "date": "2024-01-05",
+      "open": 181.99,
+      "high": 182.76,
+      "low": 180.17,
+      "close": 181.18,
+      "adjusted_close": 179.6589,
+      "volume": 62379700
+    }
+  ]
+}

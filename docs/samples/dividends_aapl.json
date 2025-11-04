@@ -1,0 +1,55 @@
+{
+  "url": "https://eodhd.com/api/div/AAPL.US?from=2018-01-01&to=2024-12-31&api_token=69099e18237790.26487595&fmt=json",
+  "data": [
+    {
+      "date": "2018-02-09",
+      "declarationDate": "2018-02-01",
+      "recordDate": "2018-02-12",
+      "paymentDate": "2018-02-15",
+      "period": "Quarterly",
+      "value": 0.1575,
+      "unadjustedValue": 0.63,
+      "currency": "USD"
+    },
+    {
+      "date": "2018-05-11",
+      "declarationDate": "2018-05-01",
+      "recordDate": "2018-05-14",
+      "paymentDate": "2018-05-17",
+      "period": "Quarterly",
+      "value": 0.1825,
+      "unadjustedValue": 0.73,
+      "currency": "USD"
+    },
+    {
+      "date": "2018-08-10",
+      "declarationDate": "2018-07-31",
+      "recordDate": "2018-08-13",
+      "paymentDate": "2018-08-16",
+      "period": "Quarterly",
+      "value": 0.1825,
+      "unadjustedValue": 0.73,
+      "currency": "USD"
+    },
+    {
+      "date": "2018-11-08",
+      "declarationDate": "2018-11-01",
+      "recordDate": "2018-11-12",
+      "paymentDate": "2018-11-15",
+      "period": "Quarterly",
+      "value": 0.1825,
+      "unadjustedValue": 0.73,
+      "currency": "USD"
+    },
+    {
+      "date": "2019-02-08",
+      "declarationDate": "2019-01-29",
+      "recordDate": "2019-02-11",
+      "paymentDate": "2019-02-14",
+      "period": "Quarterly",
+      "value": 0.1825,
+      "unadjustedValue": 0.73,
+      "currency": "USD"
+    }
+  ]
+}

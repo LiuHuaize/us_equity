@@ -1,0 +1,50 @@
+{
+  "url": "https://eodhd.com/api/exchange-symbol-list/NASDAQ?type=stock&limit=100&api_token=69099e18237790.26487595&fmt=json",
+  "data": [
+    {
+      "Code": "AACB",
+      "Name": "Artius II Acquisition Inc. Class A Ordinary Shares",
+      "Country": "USA",
+      "Exchange": "NASDAQ",
+      "Currency": "USD",
+      "Type": "Common Stock",
+      "Isin": "KYG0509J1159"
+    },
+    {
+      "Code": "AACBR",
+      "Name": "Artius II Acquisition Inc. Rights",
+      "Country": "USA",
+      "Exchange": "NASDAQ",
+      "Currency": "USD",
+      "Type": "Common Stock",
+      "Isin": "KYG0509J1233"
+    },
+    {
+      "Code": "AACBU",
+      "Name": "Artius II Acquisition Inc. Units",
+      "Country": "USA",
+      "Exchange": "NASDAQ",
+      "Currency": "USD",
+      "Type": "Common Stock",
+      "Isin": "KYG0509J1076"
+    },
+    {
+      "Code": "AACG",
+      "Name": "ATA Creativity Global",
+      "Country": "USA",
+      "Exchange": "NASDAQ",
+      "Currency": "USD",
+      "Type": "Common Stock",
+      "Isin": "US00211V1061"
+    },
+    {
+      "Code": "AACI",
+      "Name": "Armada Acquisition Corp. II Class A Ordinary Shares",
+      "Country": "USA",
+      "Exchange": "NASDAQ",
+      "Currency": "USD",
+      "Type": "Common Stock",
+      "Isin": "KYG0R38G1040"
+    }
+  ]
+}

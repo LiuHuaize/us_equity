@@ -1,0 +1,60 @@
+{
+  "url": "https://eodhd.com/api/eod-bulk-last-day/US?date=2024-01-03&api_token=69099e18237790.26487595&fmt=json",
+  "data": [
+    {
+      "code": "0P00000M7O",
+      "exchange_short_name": "US",
+      "date": "2024-01-03",
+      "open": 179.56,
+      "high": 179.56,
+      "low": 179.56,
+      "close": 179.56,
+      "adjusted_close": 179.56,
+      "volume": 0
+    },
+    {
+      "code": "0P00006G0C",
+      "exchange_short_name": "US",
+      "date": "2024-01-03",
+      "open": 3.075,
+      "high": 3.075,
+      "low": 3.075,
+      "close": 3.075,
+      "adjusted_close": 2.9006,
+      "volume": 0
+    },
+    {
+      "code": "0P000070L2",
+      "exchange_short_name": "US",
+      "date": "2024-01-03",
+      "open": 10,
+      "high": 10,
+      "low": 10,
+      "close": 10,
+      "adjusted_close": 9.1724,
+      "volume": 0
+    },
+    {
+      "code": "0P0000A2WI",
+      "exchange_short_name": "US",
+      "date": "2024-01-03",
+      "open": 6.4714,
+      "high": 6.4714,
+      "low": 6.4714,
+      "close": 6.4714,
+      "adjusted_close": 5.7287,
+      "volume": 0
+    },
+    {
+      "code": "0P0000A412",
+      "exchange_short_name": "US",
+      "date": "2024-01-03",
+      "open": 28.8751,
+      "high": 28.8751,
+      "low": 28.8751,
+      "close": 28.8751,
+      "adjusted_close": 28.8751,
+      "volume": 0
+    }
+  ]
+}
