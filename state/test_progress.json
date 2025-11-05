@@ -1,0 +1,10 @@
+{
+  "NYSE": {
+    "exchange": "NYSE",
+    "next_index": 5,
+    "failed": {},
+    "start": "2015-11-03",
+    "end": "2025-11-03",
+    "error_count": 0
+  }
+}

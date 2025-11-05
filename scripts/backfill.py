@@ -50,7 +50,19 @@ def parse_args() -> argparse.Namespace:
 def normalize_symbol(code: str, exchange: str) -> str:
     if "." in code:
         return code
-    suffix = "US" if exchange.upper() in {"NASDAQ", "NYSE", "AMEX", "US"} else exchange.upper()
+
+    exchange_key = exchange.upper().strip()
+    suffix_overrides = {
+        "NASDAQ": "US",
+        "NYSE": "US",
+        "AMEX": "US",
+        "US": "US",
+        "NYSE ARCA": "US",
+        "NYSEAMERICAN": "US",
+        "NYSE AMERICAN": "US",
+        "NYSE MKT": "US",
+    }
+    suffix = suffix_overrides.get(exchange_key, exchange_key.replace(" ", ""))
     return f"{code}.{suffix}"
 
 

@@ -277,11 +277,39 @@ def refresh_mart_daily_quotes(cur, symbols: Sequence[str], start_date: str, end_
             d.split_factor,
             d.pre_close,
             CASE WHEN d.pre_close IS NOT NULL THEN d.close - d.pre_close ELSE NULL END AS change_amt,
-            CASE WHEN d.pre_close IS NOT NULL AND d.pre_close <> 0 THEN (d.close - d.pre_close)/d.pre_close ELSE NULL END AS pct_chg,
+            CASE
+                WHEN d.pre_close IS NULL OR d.pre_close = 0 THEN NULL
+                ELSE
+                    CASE
+                        WHEN ABS((d.close - d.pre_close) / d.pre_close) >= 10000 THEN NULL
+                        ELSE (d.close - d.pre_close) / d.pre_close
+                    END
+            END AS pct_chg,
             CASE WHEN d.volume IS NOT NULL AND d.close IS NOT NULL THEN d.volume * d.close ELSE NULL END AS amount,
-            CASE WHEN d."SharesOutstanding" IS NOT NULL AND d."SharesOutstanding" <> 0 THEN d.volume::numeric/d."SharesOutstanding" ELSE NULL END AS turnover_rate,
-            CASE WHEN d."SharesFloat" IS NOT NULL AND d."SharesFloat" <> 0 THEN d.volume::numeric/d."SharesFloat" ELSE NULL END AS turnover_rate_f,
-            CASE WHEN d.avg_volume_5 IS NOT NULL AND d.avg_volume_5 <> 0 THEN d.volume::numeric / d.avg_volume_5 ELSE NULL END AS volume_ratio,
+            CASE
+                WHEN d."SharesOutstanding" IS NULL OR d."SharesOutstanding" = 0 THEN NULL
+                ELSE
+                    CASE
+                        WHEN ABS(d.volume::numeric / d."SharesOutstanding") >= 1000000 THEN NULL
+                        ELSE d.volume::numeric / d."SharesOutstanding"
+                    END
+            END AS turnover_rate,
+            CASE
+                WHEN d."SharesFloat" IS NULL OR d."SharesFloat" = 0 THEN NULL
+                ELSE
+                    CASE
+                        WHEN ABS(d.volume::numeric / d."SharesFloat") >= 1000000 THEN NULL
+                        ELSE d.volume::numeric / d."SharesFloat"
+                    END
+            END AS turnover_rate_f,
+            CASE
+                WHEN d.avg_volume_5 IS NULL OR d.avg_volume_5 = 0 THEN NULL
+                ELSE
+                    CASE
+                        WHEN ABS(d.volume::numeric / d.avg_volume_5) >= 1000000 THEN NULL
+                        ELSE d.volume::numeric / d.avg_volume_5
+                    END
+            END AS volume_ratio,
             d."PERatio" AS pe,
             d."PERatio" AS pe_ttm,
             d."PriceBookMRQ" AS pb,
@@ -293,18 +321,42 @@ def refresh_mart_daily_quotes(cur, symbols: Sequence[str], start_date: str, end_
             d."SharesFloat" AS free_share,
             CASE WHEN d."SharesOutstanding" IS NOT NULL THEN d.close * d."SharesOutstanding" ELSE NULL END AS total_mv,
             CASE WHEN d."SharesFloat" IS NOT NULL THEN d.close * d."SharesFloat" ELSE NULL END AS circ_mv,
-            CASE WHEN LAG(d.adjusted_close,5) OVER (PARTITION BY d.symbol ORDER BY d.trade_date) IS NOT NULL
-                   AND LAG(d.adjusted_close,5) OVER (PARTITION BY d.symbol ORDER BY d.trade_date) <> 0
-                   THEN d.adjusted_close / LAG(d.adjusted_close,5) OVER (PARTITION BY d.symbol ORDER BY d.trade_date) - 1 ELSE NULL END AS pct_chg_5d,
-            CASE WHEN LAG(d.adjusted_close,10) OVER (PARTITION BY d.symbol ORDER BY d.trade_date) IS NOT NULL
-                   AND LAG(d.adjusted_close,10) OVER (PARTITION BY d.symbol ORDER BY d.trade_date) <> 0
-                   THEN d.adjusted_close / LAG(d.adjusted_close,10) OVER (PARTITION BY d.symbol ORDER BY d.trade_date) - 1 ELSE NULL END AS pct_chg_10d,
-            CASE WHEN LAG(d.adjusted_close,20) OVER (PARTITION BY d.symbol ORDER BY d.trade_date) IS NOT NULL
-                   AND LAG(d.adjusted_close,20) OVER (PARTITION BY d.symbol ORDER BY d.trade_date) <> 0
-                   THEN d.adjusted_close / LAG(d.adjusted_close,20) OVER (PARTITION BY d.symbol ORDER BY d.trade_date) - 1 ELSE NULL END AS pct_chg_20d,
-            CASE WHEN LAG(d.adjusted_close,60) OVER (PARTITION BY d.symbol ORDER BY d.trade_date) IS NOT NULL
-                   AND LAG(d.adjusted_close,60) OVER (PARTITION BY d.symbol ORDER BY d.trade_date) <> 0
-                   THEN d.adjusted_close / LAG(d.adjusted_close,60) OVER (PARTITION BY d.symbol ORDER BY d.trade_date) - 1 ELSE NULL END AS pct_chg_60d,
+            CASE
+                WHEN LAG(d.adjusted_close,5) OVER (PARTITION BY d.symbol ORDER BY d.trade_date) IS NULL
+                     OR LAG(d.adjusted_close,5) OVER (PARTITION BY d.symbol ORDER BY d.trade_date) = 0 THEN NULL
+                ELSE
+                    CASE
+                        WHEN ABS(d.adjusted_close / LAG(d.adjusted_close,5) OVER (PARTITION BY d.symbol ORDER BY d.trade_date) - 1) >= 10000 THEN NULL
+                        ELSE d.adjusted_close / LAG(d.adjusted_close,5) OVER (PARTITION BY d.symbol ORDER BY d.trade_date) - 1
+                    END
+            END AS pct_chg_5d,
+            CASE
+                WHEN LAG(d.adjusted_close,10) OVER (PARTITION BY d.symbol ORDER BY d.trade_date) IS NULL
+                     OR LAG(d.adjusted_close,10) OVER (PARTITION BY d.symbol ORDER BY d.trade_date) = 0 THEN NULL
+                ELSE
+                    CASE
+                        WHEN ABS(d.adjusted_close / LAG(d.adjusted_close,10) OVER (PARTITION BY d.symbol ORDER BY d.trade_date) - 1) >= 10000 THEN NULL
+                        ELSE d.adjusted_close / LAG(d.adjusted_close,10) OVER (PARTITION BY d.symbol ORDER BY d.trade_date) - 1
+                    END
+            END AS pct_chg_10d,
+            CASE
+                WHEN LAG(d.adjusted_close,20) OVER (PARTITION BY d.symbol ORDER BY d.trade_date) IS NULL
+                     OR LAG(d.adjusted_close,20) OVER (PARTITION BY d.symbol ORDER BY d.trade_date) = 0 THEN NULL
+                ELSE
+                    CASE
+                        WHEN ABS(d.adjusted_close / LAG(d.adjusted_close,20) OVER (PARTITION BY d.symbol ORDER BY d.trade_date) - 1) >= 10000 THEN NULL
+                        ELSE d.adjusted_close / LAG(d.adjusted_close,20) OVER (PARTITION BY d.symbol ORDER BY d.trade_date) - 1
+                    END
+            END AS pct_chg_20d,
+            CASE
+                WHEN LAG(d.adjusted_close,60) OVER (PARTITION BY d.symbol ORDER BY d.trade_date) IS NULL
+                     OR LAG(d.adjusted_close,60) OVER (PARTITION BY d.symbol ORDER BY d.trade_date) = 0 THEN NULL
+                ELSE
+                    CASE
+                        WHEN ABS(d.adjusted_close / LAG(d.adjusted_close,60) OVER (PARTITION BY d.symbol ORDER BY d.trade_date) - 1) >= 10000 THEN NULL
+                        ELSE d.adjusted_close / LAG(d.adjusted_close,60) OVER (PARTITION BY d.symbol ORDER BY d.trade_date) - 1
+                    END
+            END AS pct_chg_60d,
             now(),
             now()
         FROM daily d

@@ -1,0 +1,59 @@
+{
+  "NYSE": {
+    "exchange": "NYSE",
+    "next_index": 5738,
+    "failed": {
+      "AMTB.US": {
+        "attempts": 1,
+        "error": "NumericValueOutOfRange: numeric field overflow\nDETAIL:  A field with precision 10, scale 6 must round to an absolute value less than 10^4.\n"
+      },
+      "AZTR.US": {
+        "attempts": 1,
+        "error": "NumericValueOutOfRange: numeric field overflow\nDETAIL:  A field with precision 10, scale 6 must round to an absolute value less than 10^4.\n"
+      },
+      "GMRE.US": {
+        "attempts": 1,
+        "error": "NumericValueOutOfRange: numeric field overflow\nDETAIL:  A field with precision 10, scale 6 must round to an absolute value less than 10^4.\n"
+      },
+      "KULR.US": {
+        "attempts": 1,
+        "error": "NumericValueOutOfRange: numeric field overflow\nDETAIL:  A field with precision 10, scale 6 must round to an absolute value less than 10^4.\n"
+      },
+      "OAK-P-A.US": {
+        "attempts": 1,
+        "error": "NumericValueOutOfRange: numeric field overflow\nDETAIL:  A field with precision 10, scale 6 must round to an absolute value less than 10^4.\n"
+      },
+      "OAK-P-B.US": {
+        "attempts": 1,
+        "error": "NumericValueOutOfRange: numeric field overflow\nDETAIL:  A field with precision 10, scale 6 must round to an absolute value less than 10^4.\n"
+      },
+      "CLIP.US": {
+        "attempts": 1,
+        "error": "NumericValueOutOfRange: numeric field overflow\nDETAIL:  A field with precision 10, scale 6 must round to an absolute value less than 10^4.\n"
+      },
+      "IAUM.US": {
+        "attempts": 1,
+        "error": "NumericValueOutOfRange: numeric field overflow\nDETAIL:  A field with precision 12, scale 6 must round to an absolute value less than 10^6.\n"
+      },
+      "KLMN.US": {
+        "attempts": 1,
+        "error": "NumericValueOutOfRange: numeric field overflow\nDETAIL:  A field with precision 12, scale 6 must round to an absolute value less than 10^6.\n"
+      },
+      "KOOL.US": {
+        "attempts": 1,
+        "error": "NumericValueOutOfRange: numeric field overflow\nDETAIL:  A field with precision 10, scale 6 must round to an absolute value less than 10^4.\n"
+      }
+    },
+    "start": "2015-11-03",
+    "end": "2025-11-03",
+    "error_count": 10
+  },
+  "AMEX": {
+    "exchange": "AMEX",
+    "next_index": 34,
+    "failed": {},
+    "start": "2015-11-03",
+    "end": "2025-11-03",
+    "error_count": 0
+  }
+}

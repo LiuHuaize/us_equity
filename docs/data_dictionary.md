@@ -81,11 +81,11 @@
 | `symbol`, `trade_date`, `open`~`adjusted_close`, `volume`, `dividend`, `split_factor` | 直接来自 `stg_eod_quotes`/`fact_corporate_actions` | 与 staging 同型 | 按日同步最新值。 |
 | `pre_close` | 前一日 `close` | `numeric(16,6)` | 若前一日缺失，用前一日 `adjusted_close`。 |
 | `change_amt` | `close - pre_close` | `numeric(16,6)` | 若 `pre_close` 为 NULL，则置 NULL 并记录异常。 |
-| `pct_chg` | `change_amt / pre_close` | `numeric(10,6)` | `pre_close` 为 0 或缺失时置 NULL。 |
+| `pct_chg` | `change_amt / pre_close` | `numeric(10,6)` | `pre_close` 为 0 或缺失时置 NULL；绝对值 ≥ 10,000 的异常波动会被截断为 NULL。 |
 | `amount` | `volume * close` | `numeric(20,6)` | 若 volume 为 NULL/0，置 NULL。 |
-| `turnover_rate` | `volume / SharesOutstanding` | `numeric(12,6)` | `SharesOutstanding` 缺失则置 NULL（ETF 依赖 `outstandingShares` 推导）。 |
-| `turnover_rate_f` | `volume / SharesFloat` | `numeric(12,6)` | 同上，若缺则回退为 `SharesOutstanding`。 |
-| `volume_ratio` | `volume / SMA(volume, n)` | `numeric(12,6)` | 默认使用 5 日平均；不足窗口（如首日）置 NULL 并作为监控阈值豁免。 |
+| `turnover_rate` | `volume / SharesOutstanding` | `numeric(12,6)` | `SharesOutstanding` 缺失则置 NULL（ETF 依赖 `outstandingShares` 推导）；绝对值 ≥ 1,000,000 时视为异常改写为 NULL。 |
+| `turnover_rate_f` | `volume / SharesFloat` | `numeric(12,6)` | 同上，若缺则回退为 `SharesOutstanding`；绝对值 ≥ 1,000,000 时改写为 NULL。 |
+| `volume_ratio` | `volume / SMA(volume, n)` | `numeric(12,6)` | 默认使用 5 日平均；不足窗口（如首日）置 NULL 并作为监控阈值豁免；绝对值 ≥ 1,000,000 的离群值截断为 NULL。 |
 | `pe` | `close / (EarningsShareTTM)` | `numeric(18,6)` | 如需使用 `Highlights.DilutedEpsTTM`；缺失则 NULL。 |
 | `pe_ttm` | `Highlights.PERatio` | `numeric(18,6)` | 直接来自 fundamentals。 |
 | `pb` | `close / BookValuePerShare` 或 `PriceBookMRQ` | `numeric(18,6)` | 优先使用原值，缺失时重算。 |
@@ -97,7 +97,7 @@
 | `free_share` | `SharesFloat` | `numeric(20,4)` | 同上。 |
 | `total_mv` | `close * SharesOutstanding` | `numeric(20,4)` | 缺少股本时置 NULL。 |
 | `circ_mv` | `close * SharesFloat` | `numeric(20,4)` | 同上。 |
-| `pct_chg_5d/10d/20d/60d` | `(adj_close / adj_close.shift(n)) - 1` | `numeric(10,6)` | 数据不足窗口时置 NULL。 |
+| `pct_chg_5d/10d/20d/60d` | `(adj_close / adj_close.shift(n)) - 1` | `numeric(10,6)` | 数据不足窗口时置 NULL；绝对值 ≥ 10,000 的结果被截断为 NULL。 |
 | `created_at`/`updated_at` | 系统填充 | `timestamptz` | 记录刷新时间。 |
 
 ## 分页与缺失值说明
