@@ -100,6 +100,23 @@
 | `pct_chg_5d/10d/20d/60d` | `(adj_close / adj_close.shift(n)) - 1` | `numeric(10,6)` | 数据不足窗口时置 NULL；绝对值 ≥ 10,000 的结果被截断为 NULL。 |
 | `created_at`/`updated_at` | 系统填充 | `timestamptz` | 记录刷新时间。 |
 
+## mart_etf_periodic_returns（ETF 周期收益聚合）
+
+| 字段 | 计算来源 | 类型 | 说明 |
+| --- | --- | --- | --- |
+| `symbol` | `mart_daily_quotes.symbol` | `varchar(20)` | ETF 标的（仅 `dim_symbol.asset_type = 'ETF'` 会写入）。 |
+| `period_type` | SQL 常量 | `text` | `year`（年度）或 `month`（月度）。 |
+| `period_key` | `TO_CHAR(period_start, ...)` | `varchar(10)` | 年度示例 `2024`，月度示例 `2024-11`。 |
+| `period_start` / `period_end` | `DATE_TRUNC` 派生 | `date` | 周期首尾日期；月度末日以自然月最后一天计算。 |
+| `trading_days` | `COUNT(*)` | `int` | 周期内的交易日数量。 |
+| `total_return_pct` | `last(adj_close) / first(adj_close) - 1` | `numeric(18,8)` | 简单收益率，基于复权收盘价。 |
+| `compound_return_pct` | `EXP(SUM(LN(1 + pct_chg))) - 1` | `numeric(18,8)` | 连续复利收益；若 `pct_chg` 缺失则跳过。 |
+| `volatility_pct` | `STDDEV_SAMP(pct_chg) * sqrt(252)` | `numeric(18,8)` | 年化波动率；样本数 ≤1 时返回 NULL。 |
+| `max_drawdown_pct` | `adjusted_close / running_max - 1` 最小值 | `numeric(18,8)` | 周期内最大回撤（负值越小越差）。 |
+| `created_at` / `updated_at` | `CURRENT_TIMESTAMP` | `timestamptz` | 聚合写入时间。 |
+
+> 维护方式：使用 `refresh_mart_etf_periodic_returns(symbols := NULL, p_start := NULL, p_end := NULL)` 默认刷新最近十年数据。`scripts.backfill` 与 `scripts.daily_update` 会在写入 `mart_daily_quotes` 后调用该函数。
+
 ## 分页与缺失值说明
 - `exchange-symbol-list` 默认返回完整列表，可通过 `api_token=...&limit=1000&offset=0` 手动分页；接口示例显示 `limit` 未生效，需结合官方文档确认/通过 `offset` 分块。
 - `eod-bulk-last-day` 无分页，若需历史数据需逐日拉取；数据集中 `exchange_short_name` 可用于过滤（计划中落地为 `dim_symbol.exchange`）。

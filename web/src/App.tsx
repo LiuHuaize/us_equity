@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
+import { NavLink, Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 
 import './App.css'
 import { OverlapTable } from './components/OverlapTable'
@@ -12,6 +12,7 @@ import type {
   EtfRanking,
   OverlapRanking
 } from './types'
+import { EtfDetailPage } from './pages/EtfDetailPage'
 
 const DATASET_CONFIGS: DatasetConfig[] = [
   {
@@ -47,6 +48,7 @@ const DATASET_CONFIG_MAP = DATASET_CONFIGS.reduce<Record<DatasetKey, DatasetConf
 
 function DatasetPage({ datasetId }: { datasetId: DatasetKey }) {
   const config = DATASET_CONFIG_MAP[datasetId]
+  const navigate = useNavigate()
   const [state, setState] = useState<DatasetState<EtfRanking[] | OverlapRanking[]>>({
     status: 'loading',
     data: []
@@ -91,7 +93,14 @@ function DatasetPage({ datasetId }: { datasetId: DatasetKey }) {
           {config.type === 'overlap' ? (
             <OverlapTable data={state.data as OverlapRanking[]} />
           ) : (
-            <RankingTable data={state.data as EtfRanking[]} />
+            <RankingTable
+              data={state.data as EtfRanking[]}
+              onSelect={(row) =>
+                navigate(`/etf/${row.symbol}`, {
+                  state: { name: row.name }
+                })
+              }
+            />
           )}
         </div>
       )}
@@ -138,6 +147,7 @@ function App() {
           <Route path="/five-year" element={<DatasetPage datasetId="fiveYear" />} />
           <Route path="/ten-year" element={<DatasetPage datasetId="tenYear" />} />
           <Route path="/overlap" element={<DatasetPage datasetId="overlap" />} />
+          <Route path="/etf/:symbol" element={<EtfDetailPage />} />
           <Route path="*" element={<Navigate to="/five-year" replace />} />
         </Routes>
       </main>

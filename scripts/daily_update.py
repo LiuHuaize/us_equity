@@ -14,6 +14,7 @@ from .config import get_config
 from .db import get_connection
 from .etl_loaders import (
     log_null_metrics,
+    refresh_etf_periodic_returns,
     refresh_mart_daily_quotes,
     upsert_dividends,
     upsert_eod_quotes,
@@ -142,6 +143,7 @@ def process_daily_update(args: argparse.Namespace) -> None:
                     upsert_splits(cur, db_symbol, splits)
 
             refresh_mart_daily_quotes(cur, processed_symbols, start_date.isoformat(), end_date)
+            refresh_etf_periodic_returns(cur, processed_symbols, start_date, end_date)
             metrics = log_null_metrics(cur, processed_symbols)
             conn.commit()
             LOGGER.info("Daily update completed metrics=%s", metrics)

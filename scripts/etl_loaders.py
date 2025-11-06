@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from decimal import Decimal
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
 from psycopg2.extras import execute_values
 
@@ -17,6 +17,14 @@ from .utils import (
 
 
 LOGGER = logging.getLogger(__name__)
+
+
+def _coerce_date(value: Union[str, date, None]) -> Optional[date]:
+    if value is None:
+        return None
+    if isinstance(value, date):
+        return value
+    return datetime.fromisoformat(value).date()
 
 
 def upsert_symbol(cur, symbol: str, payload: Dict[str, Any]) -> str:
@@ -394,6 +402,27 @@ def refresh_mart_daily_quotes(cur, symbols: Sequence[str], start_date: str, end_
             updated_at=now();
         """,
         (list(symbols), list(symbols), start_date, end_date),
+    )
+
+
+def refresh_etf_periodic_returns(
+    cur,
+    symbols: Sequence[str],
+    start_date: Union[str, date, None],
+    end_date: Union[str, date, None],
+) -> None:
+    if not symbols:
+        return
+
+    unique_symbols = list(dict.fromkeys(symbols))
+    start_dt = _coerce_date(start_date)
+    end_dt = _coerce_date(end_date)
+
+    cur.execute(
+        """
+        SELECT refresh_mart_etf_periodic_returns(%s, %s, %s);
+        """,
+        (unique_symbols, start_dt, end_dt),
     )
 
 

@@ -42,3 +42,36 @@ export interface DatasetState<TData> {
   data: TData
   error?: string
 }
+
+export interface EtfPeriodReturn {
+  periodKey: string
+  periodStart: string
+  periodEnd: string
+  tradingDays: number
+  totalReturnPct: number | null
+  compoundReturnPct: number | null
+  volatilityPct: number | null
+  maxDrawdownPct: number | null
+}
+
+export interface EtfReturnSeries {
+  symbol: string
+  period: 'year' | 'month'
+  rows: EtfPeriodReturn[]
+}
+
+export interface EtfReturnStats {
+  symbol: string
+  windowYears: number
+  periods: number
+  totalReturnPct: number | null
+  averageAnnualReturnPct: number | null
+  maxDrawdownPct: number | null
+  averageVolatilityPct: number | null
+  bestPeriodKey: string | null
+  bestPeriodReturnPct: number | null
+  worstPeriodKey: string | null
+  worstPeriodReturnPct: number | null
+  startDate: string
+  endDate: string
+}

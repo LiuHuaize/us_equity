@@ -10,9 +10,10 @@ import './RankingTable.css'
 
 interface RankingTableProps {
   data: EtfRanking[]
+  onSelect?: (row: EtfRanking) => void
 }
 
-export function RankingTable({ data }: RankingTableProps) {
+export function RankingTable({ data, onSelect }: RankingTableProps) {
   return (
     <div className="ranking-table">
       <table>
@@ -28,21 +29,54 @@ export function RankingTable({ data }: RankingTableProps) {
           </tr>
         </thead>
         <tbody>
-          {data.map((row) => (
-            <tr key={row.rank} className={row.rank <= 3 ? 'ranking-table__row--top' : undefined}>
-              <td>#{row.rank}</td>
-              <td>{formatSymbol(row.symbol)}</td>
-              <td>{row.name}</td>
-              <td>
-                <span>{row.start_date}</span>
-                <span className="ranking-table__dash">→</span>
-                <span>{row.end_date}</span>
-              </td>
-              <td>{formatInteger(row.holding_days)}</td>
-              <td>{formatMultiple(row.total_return)}</td>
-              <td>{formatPercent(row.annualized_return)}</td>
-            </tr>
-          ))}
+          {data.map((row) => {
+            const isTop = row.rank <= 3
+            const isClickable = Boolean(onSelect)
+            const classNames = [
+              isTop ? 'ranking-table__row--top' : undefined,
+              isClickable ? 'ranking-table__row--clickable' : undefined
+            ]
+              .filter(Boolean)
+              .join(' ')
+
+            return (
+              <tr
+                key={row.rank}
+                className={classNames || undefined}
+                onClick={
+                  onSelect
+                    ? () => {
+                        onSelect(row)
+                      }
+                    : undefined
+                }
+                onKeyDown={
+                  onSelect
+                    ? (event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault()
+                          onSelect(row)
+                        }
+                      }
+                    : undefined
+                }
+                role={onSelect ? 'button' : undefined}
+                tabIndex={onSelect ? 0 : undefined}
+              >
+                <td>#{row.rank}</td>
+                <td>{formatSymbol(row.symbol)}</td>
+                <td>{row.name}</td>
+                <td>
+                  <span>{row.start_date}</span>
+                  <span className="ranking-table__dash">→</span>
+                  <span>{row.end_date}</span>
+                </td>
+                <td>{formatInteger(row.holding_days)}</td>
+                <td>{formatMultiple(row.total_return)}</td>
+                <td>{formatPercent(row.annualized_return)}</td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </div>

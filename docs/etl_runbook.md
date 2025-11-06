@@ -12,7 +12,7 @@
 | S2 批量基本面 | `/bulk-fundamentals/{EXCHANGE}` | 每 1000 条分页，写入 `stg_fundamentals`（使用 `UpdatedAt`） | `stg_fundamentals`、`dim_symbol` 行业信息补全 | 校验非空字段（`General.Code`、`SharesStats`），记录缺失值统计 | 遇到 HTTP/解析错误 → 记录偏移量，重跑该分页；连续失败则终止流程 |
 | S3 历史行情 | `/eod/{SYMBOL}` 按年/季度 | 将数据写入 `stg_eod_quotes` | `stg_eod_quotes` | 校验日期连续、字段齐备；确认最新日期覆盖至目标日 | 遇错误 → 标记 `symbol + date_range`，稍后重跑；若多次失败，记录于 `etl_job_status` |
 | S4 企业行为 | `/div/{SYMBOL}`、`/splits/{SYMBOL}` | 收集历史分红、拆分，写入 `fact_corporate_actions` | `fact_corporate_actions` | 对齐历史关键事件（如 AAPL 2020 拆分） | 网络错误 → 重试；数据缺失 → 记录警告，继续流程 |
-| S5 指标计算 | 集成 S2~S4 结果 | 计算换手、估值、多日涨跌（见数据字典） | `mart_daily_quotes` | 抽样校验算式，确保数值合理（如 turnover ≤ 5） | 若缺基础数据导致空值 → 记录 `mart_daily_quotes` 的空值比例 |
+| S5 指标计算 | 集成 S2~S4 结果 | 计算换手、估值、多日涨跌（见数据字典），并刷新 ETF 周期收益视图 | `mart_daily_quotes`、`mart_etf_periodic_returns` | 抽样校验算式，确保数值合理（如 turnover ≤ 5）；抽查年度收益是否与累计收盘价一致 | 若缺基础数据导致空值 → 记录 `mart_daily_quotes` 的空值比例 |
 | S6 QA 验证 | `mart_daily_quotes` | 随机抽样 50 条与原始接口对照 | QA 报告 | 记录差异并修复 | 如差异重大 → 回滚对应日期数据并重算 |
 
 ### 1.2 具体执行建议
@@ -54,7 +54,7 @@
 | D1 批量行情 | 16:45 | `/eod-bulk-last-day/US` | Upsert 至 `stg_eod_quotes` | 检查记录数 ≥ 前一日；若少于 40k 给出告警 | 重试 3 次；仍失败则延迟 15 分钟再跑 |
 | D2 基本面刷新 | 17:00 | `/bulk-fundamentals/{EXCHANGE}`（按日轮询） | 更新 `stg_fundamentals`、同步行业信息 | 对比 `UpdatedAt` 是否新于上次；记录更新数 | 请求失败 → 记录错误并保留旧数据，次日重跑 |
 | D3 企业行为 | 17:05 | `/div/{SYMBOL}`、`/splits/{SYMBOL}`（最近 7 日） | 新增事件至 `fact_corporate_actions` | 确认当天事件数量；必要时人工核对 | 请求失败 → 重试；若仍失败，下一日 D3 会补抓 |
-| D4 指标刷新 | 17:10 | 综合 `stg_*` 数据 | 更新 `mart_daily_quotes` | 随机抽样当日 20 条校验涨跌幅、换手等 | 若空值异常增长 → 在日志提示并保留旧值 |
+| D4 指标刷新 | 17:10 | 综合 `stg_*` 数据 | 更新 `mart_daily_quotes` 并调用 `refresh_mart_etf_periodic_returns` | 随机抽样当日 20 条校验涨跌幅、换手等；对比最近一年年度/月度收益 | 若空值异常增长 → 在日志提示并保留旧值 |
 | D5 状态记录 | 17:15 | — | 更新 `etl_job_status` (`daily_update`, `ALL`) | 写入执行耗时、成功数、警告数 | 若写入失败需人工检查数据库连接 |
 
 **脚本示例**：`python -m scripts.daily_update --refresh-fundamentals --lookback-days 90`

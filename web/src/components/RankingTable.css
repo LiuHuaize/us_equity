@@ -42,6 +42,15 @@
   background: rgba(56, 189, 248, 0.2);
 }
 
+.ranking-table__row--clickable {
+  cursor: pointer;
+}
+
+.ranking-table__row--clickable:focus {
+  outline: 2px solid rgba(59, 130, 246, 0.6);
+  outline-offset: -2px;
+}
+
 .ranking-table__dash {
   display: inline-block;
   margin: 0 8px;

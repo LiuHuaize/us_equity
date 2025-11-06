@@ -14,6 +14,7 @@ from .config import get_config
 from .db import get_connection
 from .etl_loaders import (
     log_null_metrics,
+    refresh_etf_periodic_returns,
     refresh_mart_daily_quotes,
     upsert_dividends,
     upsert_eod_quotes,
@@ -104,6 +105,7 @@ def process_symbol(
             upsert_dividends(cur, stored_symbol, dividends)
             upsert_splits(cur, stored_symbol, splits)
             refresh_mart_daily_quotes(cur, [stored_symbol], start_date, end_date)
+            refresh_etf_periodic_returns(cur, [stored_symbol], start_date, end_date)
             metrics = log_null_metrics(cur, [stored_symbol])
             conn.commit()
             LOGGER.info("Completed %s metrics=%s", stored_symbol, metrics)
