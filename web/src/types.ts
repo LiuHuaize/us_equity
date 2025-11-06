@@ -75,3 +75,23 @@ export interface EtfReturnStats {
   startDate: string
   endDate: string
 }
+
+export type PerformanceInterval = 'day' | 'month' | 'year'
+
+export interface EtfPerformancePoint {
+  date: string
+  etfValue: number
+  benchmarkValue: number
+  etfCumulativeReturnPct: number
+  benchmarkCumulativeReturnPct: number
+  spreadPct: number
+}
+
+export interface EtfPerformanceSeries {
+  symbol: string
+  benchmark: string
+  interval: PerformanceInterval
+  startDate: string
+  endDate: string
+  points: EtfPerformancePoint[]
+}

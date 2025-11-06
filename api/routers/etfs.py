@@ -8,7 +8,20 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from ..config import settings
 from ..deps import get_db_connection, verify_api_token
-from ..schemas import PeriodicReturn, ReturnSeries, ReturnStats
+from ..schemas import (
+    PerformancePoint,
+    PerformanceSeries,
+    PeriodicReturn,
+    ReturnSeries,
+    ReturnStats,
+)
+
+
+BUCKET_EXPRESSIONS = {
+    "day": "f.trade_date",
+    "month": "date_trunc('month', f.trade_date)::date",
+    "year": "date_trunc('year', f.trade_date)::date",
+}
 
 
 router = APIRouter(
@@ -76,6 +89,164 @@ async def get_periodic_returns(
     ]
 
     return ReturnSeries(symbol=symbol, period=period_type, rows=payload)
+
+
+@router.get(
+    "/{symbol}/performance",
+    response_model=PerformanceSeries,
+    summary="ETF 与基准的累计收益对比",
+)
+async def get_performance_series(
+    symbol: str,
+    interval: str = Query(
+        "day",
+        description="聚合粒度：'day'、'month' 或 'year'",
+    ),
+    years: int = Query(
+        settings.default_return_years,
+        ge=1,
+        le=30,
+        description="向后统计的年份跨度",
+    ),
+    benchmark: Optional[str] = Query(
+        None,
+        description="对比基准的 symbol，默认为 ETF_DEFAULT_BENCHMARK",
+    ),
+    conn: asyncpg.Connection = Depends(get_db_connection),
+) -> PerformanceSeries:
+    interval_key = interval.lower()
+    if interval_key not in BUCKET_EXPRESSIONS:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="interval 必须是 day、month 或 year")
+
+    benchmark_symbol = benchmark or settings.default_benchmark_symbol
+    if benchmark_symbol == symbol:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="基准 symbol 不可与标的一致")
+
+    bucket_expr = BUCKET_EXPRESSIONS[interval_key]
+    query = f"""
+        WITH symbol_bounds AS (
+            SELECT symbol,
+                   MIN(trade_date) AS min_date,
+                   MAX(trade_date) AS max_date
+            FROM mart_daily_quotes
+            WHERE symbol = ANY($1)
+              AND adjusted_close IS NOT NULL
+              AND adjusted_close > 0
+            GROUP BY symbol
+        ),
+        available AS (
+            SELECT
+                MIN(max_date) AS end_date,
+                MAX(min_date) AS min_shared_date,
+                COUNT(*) AS symbol_count
+            FROM symbol_bounds
+        ),
+        range_bounds AS (
+            SELECT
+                end_date,
+                GREATEST(
+                    (end_date - make_interval(years => $2))::date,
+                    min_shared_date
+                ) AS start_date
+            FROM available
+            WHERE end_date IS NOT NULL
+              AND min_shared_date IS NOT NULL
+              AND symbol_count >= 2
+        ),
+        filtered AS (
+            SELECT mdq.symbol,
+                   mdq.trade_date,
+                   mdq.adjusted_close
+            FROM mart_daily_quotes mdq
+            JOIN range_bounds rb
+              ON mdq.trade_date BETWEEN rb.start_date AND rb.end_date
+            WHERE mdq.symbol = ANY($1)
+              AND mdq.adjusted_close IS NOT NULL
+              AND mdq.adjusted_close > 0
+        ),
+        bucketed AS (
+            SELECT
+                f.symbol,
+                {bucket_expr} AS bucket_date,
+                f.trade_date,
+                f.adjusted_close,
+                ROW_NUMBER() OVER (PARTITION BY f.symbol, {bucket_expr} ORDER BY f.trade_date DESC) AS rn_desc
+            FROM filtered f
+        ),
+        aggregated AS (
+            SELECT
+                symbol,
+                bucket_date,
+                adjusted_close
+            FROM bucketed
+            WHERE rn_desc = 1
+        ),
+        aligned AS (
+            SELECT
+                bucket_date,
+                MAX(CASE WHEN symbol = $3 THEN adjusted_close END) AS etf_close,
+                MAX(CASE WHEN symbol = $4 THEN adjusted_close END) AS benchmark_close
+            FROM aggregated
+            GROUP BY bucket_date
+            HAVING COUNT(*) FILTER (WHERE symbol = $3) > 0
+               AND COUNT(*) FILTER (WHERE symbol = $4) > 0
+        )
+        SELECT
+            bucket_date,
+            etf_close,
+            benchmark_close
+        FROM aligned
+        ORDER BY bucket_date;
+    """
+
+    symbols = [symbol, benchmark_symbol]
+    rows = await conn.fetch(query, symbols, years, symbol, benchmark_symbol)
+
+    if not rows:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="未找到可用的价格数据")
+
+    base_etf = float(rows[0]["etf_close"])
+    base_benchmark = float(rows[0]["benchmark_close"])
+    if base_etf <= 0 or base_benchmark <= 0:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="初始价格必须大于 0")
+
+    points: list[PerformancePoint] = []
+    for record in rows:
+        etf_close = float(record["etf_close"])
+        benchmark_close = float(record["benchmark_close"])
+        if etf_close <= 0 or benchmark_close <= 0:
+            continue
+
+        etf_value = etf_close / base_etf
+        benchmark_value = benchmark_close / base_benchmark
+        etf_return = etf_value - 1.0
+        benchmark_return = benchmark_value - 1.0
+
+        points.append(
+            PerformancePoint(
+                date=record["bucket_date"],
+                etf_value=etf_value,
+                benchmark_value=benchmark_value,
+                etf_cumulative_return_pct=etf_return,
+                benchmark_cumulative_return_pct=benchmark_return,
+                spread_pct=etf_return - benchmark_return,
+            )
+        )
+
+    if not points:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="无法计算累计收益")
+
+    start_date = points[0].date
+    end_date = points[-1].date
+
+    return PerformanceSeries(
+        symbol=symbol,
+        benchmark=benchmark_symbol,
+        interval=interval_key,
+        start_date=start_date,
+        end_date=end_date,
+        points=points,
+    )
 
 
 @router.get("/{symbol}/stats", response_model=ReturnStats, summary="ETF 周期收益统计")

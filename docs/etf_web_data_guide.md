@@ -121,7 +121,8 @@
 
 ## 10. ETF 详情页动态数据
 
-- **接口依赖**：详情页调用 `GET /api/etfs/{symbol}/returns`（年度/首次加载、月度/按需加载）和 `GET /api/etfs/{symbol}/stats` 两类 REST 接口。默认分别请求 10 条年度、120 条月度记录，可通过 `VITE_ETF_YEAR_LIMIT`、`VITE_ETF_MONTH_LIMIT`、`VITE_ETF_STATS_YEARS` 调整。
+- **接口依赖**：详情页调用 `GET /api/etfs/{symbol}/returns`（年度/首次加载、月度/按需加载）、`GET /api/etfs/{symbol}/stats` 和 `GET /api/etfs/{symbol}/performance`（按日/月/年累计收益对比基准）三类 REST 接口。默认分别请求 10 条年度、120 条月度记录及 10 年对比区间，可通过 `VITE_ETF_YEAR_LIMIT`、`VITE_ETF_MONTH_LIMIT`、`VITE_ETF_STATS_YEARS`、`VITE_ETF_PERFORMANCE_YEARS` 调整。
+- **可视化**：新增折线图对比 ETF 与基准（默认 `SPY.US`）的累计收益，支持 Brush 滑动缩放。基准 symbol 可通过后端 `ETF_DEFAULT_BENCHMARK` 或接口参数覆盖。
 - **请求节奏**：年度收益与统计指标在进入页面后即加载；月度收益在用户切换 Tab 时触发，避免首屏等待过长。所有请求自动附带 `X-API-Token` 头（如启用）。
 - **数据回显**：收益表按 `period_key` 倒序展示，字段含总收益、复利收益、最大回撤、波动率与交易日。统计卡片显示总收益、平均年化、最大回撤、平均波动率及时间范围。
 - **错误处理**：接口异常时直接在页面提示失败信息，方便排查。可在浏览器 DevTools 确认请求 URL 与返回码，必要时通过 `docs/api_server.md` 中 SQL 样例手动校验数据库。

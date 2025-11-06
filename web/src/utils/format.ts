@@ -11,8 +11,37 @@ const decimalFormatter = new Intl.NumberFormat('zh-CN', {
 
 const integerFormatter = new Intl.NumberFormat('zh-CN')
 
+const shortPercentFormatter = new Intl.NumberFormat('zh-CN', {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 1
+})
+
+const compactNumberFormatter = new Intl.NumberFormat('zh-CN', {
+  notation: 'compact',
+  maximumFractionDigits: 1
+})
+
 export function formatPercent(value: number): string {
   return percentFormatter.format(value)
+}
+
+export function formatCompactPercent(value: number): string {
+  if (!Number.isFinite(value)) {
+    return '-'
+  }
+
+  const percentValue = value * 100
+  const absPercentValue = Math.abs(percentValue)
+
+  if (absPercentValue < 1) {
+    return `${decimalFormatter.format(percentValue)}%`
+  }
+
+  if (absPercentValue < 1000) {
+    return `${shortPercentFormatter.format(percentValue)}%`
+  }
+
+  return `${compactNumberFormatter.format(percentValue)}%`
 }
 
 export function formatMultiple(value: number): string {

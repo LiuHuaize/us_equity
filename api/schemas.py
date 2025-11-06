@@ -43,3 +43,25 @@ class ReturnStats(BaseModel):
     worst_period_return_pct: Optional[float] = Field(default=None, alias="worstPeriodReturnPct")
     start_date: date = Field(alias="startDate")
     end_date: date = Field(alias="endDate")
+
+
+class PerformancePoint(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
+    date: date
+    etf_value: float = Field(alias="etfValue")
+    benchmark_value: float = Field(alias="benchmarkValue")
+    etf_cumulative_return_pct: float = Field(alias="etfCumulativeReturnPct")
+    benchmark_cumulative_return_pct: float = Field(alias="benchmarkCumulativeReturnPct")
+    spread_pct: float = Field(alias="spreadPct")
+
+
+class PerformanceSeries(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    symbol: str
+    benchmark: str
+    interval: str
+    start_date: date = Field(alias="startDate")
+    end_date: date = Field(alias="endDate")
+    points: List[PerformancePoint]

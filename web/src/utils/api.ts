@@ -1,4 +1,9 @@
-import type { EtfReturnSeries, EtfReturnStats } from '../types'
+import type {
+  EtfPerformanceSeries,
+  EtfReturnSeries,
+  EtfReturnStats,
+  PerformanceInterval
+} from '../types'
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8080').replace(/\/$/, '')
 const API_TOKEN = import.meta.env.VITE_API_TOKEN
@@ -48,4 +53,21 @@ export async function fetchEtfStats(symbol: string, windowYears: number): Promis
   return request<EtfReturnStats>(`/api/etfs/${encodedSymbol}/stats`, {
     windowYears
   })
+}
+
+export async function fetchEtfPerformance(
+  symbol: string,
+  interval: PerformanceInterval,
+  years: number,
+  benchmark?: string
+): Promise<EtfPerformanceSeries> {
+  const encodedSymbol = encodeURIComponent(symbol)
+  const params: QueryParams = {
+    interval,
+    years
+  }
+  if (benchmark) {
+    params.benchmark = benchmark
+  }
+  return request<EtfPerformanceSeries>(`/api/etfs/${encodedSymbol}/performance`, params)
 }

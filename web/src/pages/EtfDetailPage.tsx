@@ -1,9 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 
-import type { EtfPeriodReturn, EtfReturnStats } from '../types'
-import { fetchEtfReturns, fetchEtfStats } from '../utils/api'
+import type {
+  EtfPeriodReturn,
+  EtfPerformanceSeries,
+  EtfReturnStats,
+  PerformanceInterval
+} from '../types'
+import { fetchEtfPerformance, fetchEtfReturns, fetchEtfStats } from '../utils/api'
 import { formatInteger, formatPercent, formatSymbol } from '../utils/format'
+import { EtfPerformanceChart } from '../components/EtfPerformanceChart'
 
 import './EtfDetailPage.css'
 
@@ -18,6 +24,14 @@ interface LoadState<T> {
 const DEFAULT_YEAR_LIMIT = Number(import.meta.env.VITE_ETF_YEAR_LIMIT ?? 10) || 10
 const DEFAULT_MONTH_LIMIT = Number(import.meta.env.VITE_ETF_MONTH_LIMIT ?? 120) || 120
 const DEFAULT_STATS_WINDOW = Number(import.meta.env.VITE_ETF_STATS_YEARS ?? 10) || 10
+const DEFAULT_PERFORMANCE_YEARS = Number(import.meta.env.VITE_ETF_PERFORMANCE_YEARS ?? 10) || 10
+
+const PERFORMANCE_INTERVALS: PerformanceInterval[] = ['day', 'month', 'year']
+const PERFORMANCE_LABELS: Record<PerformanceInterval, string> = {
+  day: '按日',
+  month: '按月',
+  year: '按年'
+}
 
 type EnrichedPeriodReturn = EtfPeriodReturn & { cumulativeReturnPct: number | null }
 
@@ -81,6 +95,15 @@ export function EtfDetailPage() {
     data: null
   })
 
+  const [performanceInterval, setPerformanceInterval] = useState<PerformanceInterval>('day')
+  const [performanceStates, setPerformanceStates] = useState<
+    Record<PerformanceInterval, LoadState<EtfPerformanceSeries | null>>
+  >({
+    day: { status: 'idle', data: null },
+    month: { status: 'idle', data: null },
+    year: { status: 'idle', data: null }
+  })
+
   useEffect(() => {
     if (!symbol) {
       return
@@ -127,6 +150,60 @@ export function EtfDetailPage() {
       cancelled = true
     }
   }, [symbol])
+
+  useEffect(() => {
+    setPerformanceInterval('day')
+    setPerformanceStates({
+      day: { status: 'idle', data: null },
+      month: { status: 'idle', data: null },
+      year: { status: 'idle', data: null }
+    })
+  }, [symbol])
+
+  const activePerformance = performanceStates[performanceInterval]
+
+  useEffect(() => {
+    if (!symbol) {
+      return
+    }
+    if (activePerformance.status === 'ready') {
+      return
+    }
+
+    const intervalKey = performanceInterval
+    let cancelled = false
+
+    if (activePerformance.status !== 'loading') {
+      setPerformanceStates((prev) => ({
+        ...prev,
+        [intervalKey]: { status: 'loading', data: null }
+      }))
+    }
+
+    fetchEtfPerformance(symbol, intervalKey, DEFAULT_PERFORMANCE_YEARS)
+      .then((series) => {
+        if (cancelled) return
+        setPerformanceStates((prev) => ({
+          ...prev,
+          [intervalKey]: { status: 'ready', data: series }
+        }))
+      })
+      .catch((error) => {
+        if (cancelled) return
+        setPerformanceStates((prev) => ({
+          ...prev,
+          [intervalKey]: {
+            status: 'error',
+            data: null,
+            error: error instanceof Error ? error.message : String(error)
+          }
+        }))
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [symbol, performanceInterval, activePerformance.status])
 
   useEffect(() => {
     if (activeTab !== 'month' || !symbol) {
@@ -240,6 +317,54 @@ export function EtfDetailPage() {
           统计指标加载失败：{statsState.error}
         </div>
       ) : null}
+
+      <div className="etf-detail__performance">
+        <div className="etf-detail__performance-header">
+          <div>
+            <h2>累计收益对比</h2>
+            {activePerformance.status === 'ready' && activePerformance.data ? (
+              <p className="etf-detail__performance-range">
+                {formatSymbol(symbol)} vs {formatSymbol(activePerformance.data.benchmark)} ·{' '}
+                {activePerformance.data.startDate} → {activePerformance.data.endDate}
+              </p>
+            ) : null}
+          </div>
+          <div className="etf-detail__performance-intervals">
+            {PERFORMANCE_INTERVALS.map((item) => (
+              <button
+                key={item}
+                className={
+                  performanceInterval === item
+                    ? 'etf-detail__interval etf-detail__interval--active'
+                    : 'etf-detail__interval'
+                }
+                type="button"
+                onClick={() => setPerformanceInterval(item)}
+              >
+                {PERFORMANCE_LABELS[item]}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="etf-detail__performance-body">
+          {activePerformance.status === 'loading' || activePerformance.status === 'idle' ? (
+            <div className="etf-detail__status">收益曲线加载中...</div>
+          ) : activePerformance.status === 'error' ? (
+            <div className="etf-detail__status etf-detail__status--error">
+              收益曲线加载失败：{activePerformance.error}
+            </div>
+          ) : activePerformance.data && activePerformance.data.points.length > 0 ? (
+            <EtfPerformanceChart
+              symbol={symbol}
+              benchmark={activePerformance.data.benchmark}
+              interval={activePerformance.data.interval}
+              points={activePerformance.data.points}
+            />
+          ) : (
+            <div className="etf-detail__status">暂无收益曲线数据</div>
+          )}
+        </div>
+      </div>
 
       <div className="etf-detail__tabs">
         <button

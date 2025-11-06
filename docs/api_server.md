@@ -15,6 +15,7 @@
   - `PGHOST` / `PGPORT` / `PGDATABASE` / `PGUSER` / `PGPASSWORD`
   - `API_AUTH_TOKEN`：可选，若设置则所有请求必须携带 `X-API-Token` 头。
   - `ETF_DEFAULT_RETURN_YEARS`：可选，控制统计接口默认回溯的年度数量（默认 10）。
+  - `ETF_DEFAULT_BENCHMARK`：可选，累计收益对比接口的默认基准，默认为 `SPY.US`。
   - `API_CORS_ORIGINS`：可选，逗号分隔的允许跨域来源，默认包含 `http://localhost:5173` 与 `http://127.0.0.1:5173`。
 
 ## 2. 启动方式
@@ -73,7 +74,35 @@ uvicorn api.main:app --host 127.0.0.1 --port 8080
 - 参数：`windowYears`（默认 10，范围 1–30）。
 - 返回字段包含总收益、平均年化、最大回撤、波动率，以及最佳/最差年度。
 
-### 3.3 `GET /healthz`
+### 3.3 `GET /api/etfs/{symbol}/performance`
+
+- 参数：
+  - `interval`：`day`（默认）、`month`、`year`，控制聚合粒度。
+  - `years`：向后回溯的年份跨度（默认 10，范围 1–30）。
+  - `benchmark`：可选，指定替代基准 symbol，默认取 `ETF_DEFAULT_BENCHMARK`。
+- 返回示例：
+
+  ```json
+  {
+    "symbol": "TECL.US",
+    "benchmark": "SPY.US",
+    "interval": "day",
+    "startDate": "2015-11-03",
+    "endDate": "2025-11-03",
+    "points": [
+      {
+        "date": "2015-11-03",
+        "etfValue": 1.0,
+        "benchmarkValue": 1.0,
+        "etfCumulativeReturnPct": 0.0,
+        "benchmarkCumulativeReturnPct": 0.0,
+        "spreadPct": 0.0
+      }
+    ]
+  }
+  ```
+
+### 3.4 `GET /healthz`
 
 - 健康检查端点，返回 `{ "status": "ok" }`。
 
@@ -95,6 +124,7 @@ uvicorn api.main:app --host 127.0.0.1 --port 8080
   - `/api/etfs/{symbol}/returns?period=year&limit=10`
   - `/api/etfs/{symbol}/returns?period=month&limit=120`
   - `/api/etfs/{symbol}/stats?windowYears=10`
+  - `/api/etfs/{symbol}/performance?interval=day&years=10`
 
 - ETF 榜单详情页可先加载年度收益，待用户打开月度 Tab 时再并发请求月度数据与统计信息。
 
