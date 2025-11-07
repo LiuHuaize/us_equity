@@ -1,0 +1,3 @@
+[nohup] daily_update 2025-11-04 start 2025-11-07_04:05:55
+2025-11-07 05:05:55,760 INFO daily_update - Fetching bulk EOD quotes for 2025-11-04
+2025-11-07 05:06:00,724 INFO daily_update - Symbols fetched: 48882 (limit=ALL, target_date=2025-11-04)

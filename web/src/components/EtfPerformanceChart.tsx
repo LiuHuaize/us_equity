@@ -78,7 +78,7 @@ function scalePositiveValue(value: number): number {
     return 0
   }
 
-  let previous = POSITIVE_SCALE_POINTS[0]
+  let previous: ScalePoint = POSITIVE_SCALE_POINTS[0]
   for (let index = 1; index < POSITIVE_SCALE_POINTS.length; index += 1) {
     const current = POSITIVE_SCALE_POINTS[index]
     if (value <= current.value + EPSILON) {
@@ -87,8 +87,8 @@ function scalePositiveValue(value: number): number {
     previous = current
   }
 
-  const last = POSITIVE_SCALE_POINTS[POSITIVE_SCALE_POINTS.length - 1]
-  const preLast = POSITIVE_SCALE_POINTS[POSITIVE_SCALE_POINTS.length - 2]
+  const last: ScalePoint = POSITIVE_SCALE_POINTS[POSITIVE_SCALE_POINTS.length - 1]
+  const preLast: ScalePoint = POSITIVE_SCALE_POINTS[POSITIVE_SCALE_POINTS.length - 2]
   const slope = (last.position - preLast.position) / (last.value - preLast.value)
   return last.position + (value - last.value) * slope
 }
@@ -98,7 +98,7 @@ function unscalePositiveValue(position: number): number {
     return 0
   }
 
-  let previous = POSITIVE_SCALE_POINTS[0]
+  let previous: ScalePoint = POSITIVE_SCALE_POINTS[0]
   for (let index = 1; index < POSITIVE_SCALE_POINTS.length; index += 1) {
     const current = POSITIVE_SCALE_POINTS[index]
     if (position <= current.position + EPSILON) {
@@ -107,8 +107,8 @@ function unscalePositiveValue(position: number): number {
     previous = current
   }
 
-  const last = POSITIVE_SCALE_POINTS[POSITIVE_SCALE_POINTS.length - 1]
-  const preLast = POSITIVE_SCALE_POINTS[POSITIVE_SCALE_POINTS.length - 2]
+  const last: ScalePoint = POSITIVE_SCALE_POINTS[POSITIVE_SCALE_POINTS.length - 1]
+  const preLast: ScalePoint = POSITIVE_SCALE_POINTS[POSITIVE_SCALE_POINTS.length - 2]
   const slope = (last.value - preLast.value) / (last.position - preLast.position)
   return last.value + (position - last.position) * slope
 }

@@ -5,7 +5,7 @@ import logging
 import sys
 from collections import defaultdict
 from datetime import datetime, timedelta
-from typing import Dict, List, Sequence
+from typing import Dict, List, Sequence, Set
 
 from requests import HTTPError
 
@@ -39,6 +39,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--lookback-days", type=int, default=90, help="Days of history to include when refreshing mart.")
     parser.add_argument("--limit-symbols", type=int, help="Limit number of symbols for testing.")
     parser.add_argument("--skip-dividends", action="store_true", help="Skip dividends/splits fetching (faster).")
+    parser.add_argument(
+        "--asset-types",
+        type=str,
+        default="Common Stock,ETF",
+        help="Comma-separated asset types when filtering known symbols.",
+    )
+    parser.add_argument(
+        "--only-known-symbols",
+        action="store_true",
+        help="Restrict processing to symbols already present in dim_symbol (filtered by asset types).",
+    )
     return parser.parse_args()
 
 
@@ -69,7 +80,9 @@ def fetch_bulk_quotes(client: EODHDClient, trading_date: str) -> Dict[str, List[
 
 def ensure_fundamentals(client: EODHDClient, symbols: Sequence[str]) -> Dict[str, dict]:
     fundamentals_map = {}
-    for symbol in symbols:
+    total = len(symbols)
+    for idx, symbol in enumerate(symbols, start=1):
+        LOGGER.info("Fetching fundamentals %s (%d/%d)", symbol, idx, total)
         fundamentals = client.get(f"/fundamentals/{symbol}", {})
         fundamentals_map[symbol] = fundamentals
     return fundamentals_map
@@ -79,16 +92,50 @@ def process_daily_update(args: argparse.Namespace) -> None:
     cfg = get_config()
     client = EODHDClient(cfg.eodhd_token)
 
+    asset_types = [item.strip() for item in args.asset_types.split(",") if item.strip()]
+    if not asset_types:
+        asset_types = ["Common Stock", "ETF"]
+
     trading_date = args.date
     if trading_date:
         datetime.strptime(trading_date, "%Y-%m-%d")
 
     quote_map = fetch_bulk_quotes(client, trading_date)
     symbols = list(quote_map.keys())
+
+    allowed_symbols: Set[str] = set()
+    if args.only_known_symbols:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT symbol
+                    FROM dim_symbol
+                    WHERE asset_type = ANY(%s)
+                      AND COALESCE(is_active, true)
+                    """,
+                    (asset_types,),
+                )
+                allowed_symbols = {row[0] for row in cur.fetchall()}
+        before_filter = len(symbols)
+        symbols = [symbol for symbol in symbols if symbol in allowed_symbols]
+        LOGGER.info(
+            "Filtered symbols to %d/%d using asset types %s",
+            len(symbols),
+            before_filter,
+            asset_types,
+        )
+
     if args.limit_symbols:
         symbols = symbols[: args.limit_symbols]
 
-    LOGGER.info("Symbols fetched: %d", len(symbols))
+    total_symbols = len(symbols)
+    LOGGER.info(
+        "Symbols fetched: %d (limit=%s, target_date=%s)",
+        total_symbols,
+        args.limit_symbols or "ALL",
+        trading_date or "latest",
+    )
     if not symbols:
         LOGGER.warning("No symbols returned from bulk endpoint.")
         return
@@ -110,7 +157,8 @@ def process_daily_update(args: argparse.Namespace) -> None:
 
             processed_symbols: List[str] = []
 
-            for symbol in symbols:
+            for idx, symbol in enumerate(symbols, start=1):
+                LOGGER.info("Processing %s (%d/%d)", symbol, idx, total_symbols)
                 rows = quote_map[symbol]
                 api_symbol = symbol
                 fundamentals = fundamentals_map.get(symbol)

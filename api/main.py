@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
 from .db import db
-from .routers import etfs
+from .routers import etfs, industries
 
 
 @asynccontextmanager
@@ -33,6 +33,7 @@ if settings.api_cors_origins:
     )
 
 app.include_router(etfs.router, prefix="/api")
+app.include_router(industries.router, prefix="/api")
 
 
 @app.get("/healthz", tags=["health"])

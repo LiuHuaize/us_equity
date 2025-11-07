@@ -1,0 +1,2 @@
+# 美东工作日 18:00 触发：收盘后 2 小时执行全量 daily_update
+0 18 * * 1-5 TZ=America/New_York ONLY_KNOWN_SYMBOLS=true ASSET_TYPES="Common Stock,ETF" /root/us_equity/scripts/run_daily_update.sh >> /var/log/eodhd/daily_update.log 2>&1

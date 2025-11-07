@@ -1,5 +1,5 @@
 """API 路由集合。"""
 
-from . import etfs
+from . import etfs, industries
 
-__all__ = ["etfs"]
+__all__ = ["etfs", "industries"]

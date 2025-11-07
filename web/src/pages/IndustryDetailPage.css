@@ -1,0 +1,128 @@
+.industry-detail {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.industry-detail__header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.industry-detail__header h1 {
+  margin: 8px 0 6px;
+  font-size: 1.8rem;
+}
+
+.industry-detail__header p {
+  margin: 0;
+  color: rgba(226, 232, 240, 0.8);
+}
+
+.industry-detail__back {
+  background: rgba(59, 130, 246, 0.2);
+  color: #c7d2fe;
+  border: none;
+  border-radius: 999px;
+  padding: 8px 18px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.industry-detail__back--outline {
+  background: transparent;
+  border: 1px solid rgba(99, 102, 241, 0.4);
+}
+
+.industry-detail__back:hover {
+  background: rgba(99, 102, 241, 0.35);
+  color: #ffffff;
+}
+
+.industry-detail__breadcrumb {
+  margin-left: 8px;
+  color: rgba(226, 232, 240, 0.65);
+}
+
+.industry-detail__summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 16px;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: 16px;
+  padding: 16px 24px;
+}
+
+.industry-detail__summary-label {
+  font-size: 0.9rem;
+  color: rgba(226, 232, 240, 0.7);
+}
+
+.industry-detail__summary-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.industry-detail__status {
+  padding: 32px;
+  border-radius: 20px;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  text-align: center;
+  color: rgba(226, 232, 240, 0.82);
+}
+
+.industry-detail__status--error {
+  color: #fca5a5;
+}
+
+.industry-detail__table {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: 20px;
+  overflow: auto;
+}
+
+.industry-detail__table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.industry-detail__table th,
+.industry-detail__table td {
+  padding: 14px 18px;
+  text-align: left;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.industry-detail__table th {
+  font-size: 0.9rem;
+  color: rgba(226, 232, 240, 0.72);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.industry-detail__table tr:last-child td {
+  border-bottom: none;
+}
+
+@media (max-width: 720px) {
+  .industry-detail__header {
+    flex-direction: column;
+  }
+
+  .industry-detail__header h1 {
+    font-size: 1.5rem;
+  }
+
+  .industry-detail__table th,
+  .industry-detail__table td {
+    padding: 12px;
+  }
+}

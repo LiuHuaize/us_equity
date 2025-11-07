@@ -5,9 +5,9 @@
 ## 1. 系统概览
 
 - **数据来源**：EODHD Professional 计划提供的 REST API（行情、基本面、分红、拆分、交易所列表）。
-- **数据落地**：`scripts/backfill.py` 与 `scripts/daily_update.py` 将原始数据写入 PostgreSQL（`stg_*`、`dim_symbol`、`fact_corporate_actions`、`mart_daily_quotes`）。
+- **数据落地**：`scripts/auto_backfill.py`（历史批量断点续跑）与 `scripts/daily_update.py`（日终增量）负责写入 PostgreSQL（`stg_*`、`dim_symbol`、`fact_corporate_actions`、`mart_daily_quotes`）；`scripts/backfill.py` 保留给小范围/单交易所调试。
 - **排行榜生成**：`python -m scripts.etf_rankings` 读取 `mart_daily_quotes`，计算 5 年、10 年收益及重合榜单，输出 CSV 至 `outputs/` 或指定目录。
-- **前端展示**：`web/` 下 Vite + React 应用。榜单页面仍加载 `web/public/data/*.csv`，同时在 ETF 详情页通过 FastAPI (`/api/etfs/{symbol}/returns|stats`) 动态拉取年度、月度收益及统计指标。
+- **前端展示**：`web/` 下 Vite + React 应用。榜单页面仍加载 `web/public/data/*.csv`，同时在 ETF 详情页通过 FastAPI (`/api/etfs/{symbol}/returns|stats`) 动态拉取年度、月度收益及统计指标。行业浏览页会调用 `/api/industries` 聚合 `dim_symbol` 中的 sector/industry。
 
 ## 2. 外部 API 与运行环境
 
@@ -43,7 +43,7 @@
     - 依据窗口（5 年 / 10 年）向前回溯，确保首尾报价可用；
     - 计算持有天数、累计收益（`end_price/start_price - 1`）与年化收益（`(end_price/start_price)^(365.25/holding_days) - 1`）。
   - 交易日覆盖率阈值写死在 `MIN_TRADING_DAY_RATIO = 0.55`，并排除窗口内出现 `value < 1` 拆分的 ETF（见 `docs/etf_rankings_notes.md`）。
-- **输出**：默认打印排行榜，同时可通过 `--csv-dir` 生成 `etf_rankings_5y.csv`、`etf_rankings_10y.csv`、`etf_rankings_overlap.csv`。仓库当前样例位于 `outputs/`（计算后手工拷贝到 `web/public/data/` 供前端食用）。
+- **输出**：默认打印排行榜，同时可通过 `--csv-dir` 指定输出目录。生产流程推荐执行 `python -m scripts.etf_rankings --csv-dir web/public/data` 直接覆盖前端静态文件。如需保留历史快照，可在同一命令后追加一次 `--csv-dir outputs`（重复执行写入不同目录）。
 - **调试参数**：`--top` 兼容旧版用法；`--log-level DEBUG` 可观察 SQL 运行情况。
 
 ## 5. CSV 数据字典
@@ -93,14 +93,21 @@
 
 ## 7. 数据更新与发布流程
 
-1. **刷新数据库**：根据需要运行 `scripts.backfill`（历史）或 `scripts.daily_update`（日常）。保证 `mart_daily_quotes` 含最新交易日。
-2. **生成排行榜**：执行 `python -m scripts.etf_rankings --csv-dir outputs`（或自定义目录）。复核日志与终端输出，关注“交易日覆盖”告警。
+1. **刷新数据库**：视场景选择 `python -m scripts.auto_backfill --exchange ...`（历史补数）或 `python -m scripts.daily_update --refresh-fundamentals`（日终）。确保 `mart_daily_quotes` 最新。
+2. **生成排行榜**：执行 `python -m scripts.etf_rankings --csv-dir web/public/data [--csv-dir outputs]`。复核日志与终端输出，关注“交易日覆盖”告警。若附带第二个 `--csv-dir` 参数，将再写入一份备份用于归档。
 3. **校验 CSV**：
-   - 打开 `outputs/*.csv`，确认表头、日期范围是否正确；
-   - 可通过 `head`/`tail` 检查排名是否合理，必要时抽样与 SQL 比对。
-4. **同步到前端**：将生成的 CSV 覆盖 `web/public/data/` 下同名文件。保持文件名不变以避免前端路由改动。
+   - 打开 `web/public/data/*.csv`（如同时输出 `outputs/` 亦可对比），确认表头、日期范围是否正确；
+   - 使用 `head`/`tail` 或电子表格检查排名是否合理，必要时抽样与 SQL 比对；
+   - 通过 `git diff web/public/data` 观察文件差异，确认未意外删除列。
+4. **可选归档**：若需要长期保留对比，可将 `outputs/*.csv` 搬迁到某个存档目录或对象存储，再清理本地备份。
 5. **本地预览**：在 `web/` 目录运行 `npm install`（首次）和 `npm run dev`（或 `npm run preview`）确认页面渲染正常、数值显示符合预期。
 6. **构建发布**：执行 `npm run build` 生成 `dist/`，按部署策略上传静态文件。若使用 CDN，建议刷新缓存以确保新 CSV 生效。
+
+## 7. 行业板块页面（/industries）
+
+- **接口调用**：前端通过 `GET /api/industries` 聚合 `dim_symbol`，支持 `sector`、`industry` 精确过滤；同时新增参数 `includeEtfs`（默认 `true`）、`minStockCount`（默认 `0`）以及 `skipUncategorized`（默认 `true`）来控制是否剔除 ETF、子行业最小个股数量以及是否过滤空行业。
+- **当前配置**：列表页请求 `includeEtfs=false&minStockCount=40&skipUncategorized=true`，并在前端仅保留 `stockCount > 40` 的二级行业。详情页同样传入 `includeEtfs=false`，但 `minStockCount=0` 并关闭 `skipUncategorized` 以便回看“未分类”分组。
+- **数据补齐**：若出现大量“未分类”或行业不足 185 个，可通过 `scripts.daily_update --refresh-fundamentals` 重刷 `stg_fundamentals`，或在 `scripts/utils.normalize_sector_industry` 中扩展映射逻辑，将其他字段（如 ETF category）转换为 sector/industry。
 
 ## 8. 数据质量与注意事项
 

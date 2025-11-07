@@ -10,7 +10,7 @@
 - `dim_symbol`: 成功写入 5 条，ETF 无行业/板块字段（源数据为空）。
 - `stg_fundamentals`: 每个标的插入 1 条最新快照，ETF (`SPY.US`, `ARKK.US`) 缺失 `SharesOutstanding`/`SharesFloat`；`SIRI.US` 缺失 `PERatio`。
 - `stg_eod_quotes`: 每个标的写入 7 行日行情，字段与接口完全对齐。
-- `fact_corporate_actions`: 分红数据成功记录（如 `AAPL.US` 在 2024-02-09 有 0.24 美元现金股息）；拆分接口返回的 `ratio` 为字符串（`"4:1"`），当前写入 numeric 列导致值为 NULL，需要后续转换。
+- `fact_corporate_actions`: 分红数据成功记录（如 `AAPL.US` 在 2024-02-09 有 0.24 美元现金股息）；拆分接口返回的 `ratio` 为字符串（`"4:1"`），试跑时写入 numeric 列导致值为 NULL，随后已在 ETL 中解析为浮点（见第 4 节）。
 - `mart_daily_quotes`: 共生成 35 条指标记录。首日 `pre_close`/`pct_chg`/`volume_ratio` 按预期为空，后续日期计算正确。
 
 ## 3. 指标验证
@@ -31,4 +31,4 @@
 4. **单位确认**：`SharesOutstanding` 为原始股数，若数据库字段使用“万股”需后续转换；试跑时保持原值（正数级别 10^9）。
 
 ## 5. 结论
-样例试跑验证了 staging→mart 转换链路可用，主要需解决拆分比率解析与 ETF 股本缺口问题后再扩大范围。后续可在此基础上编写历史补数脚本，并加入上述空值/异常监控。
+样例试跑验证了 staging→mart 转换链路可用，主要剩余任务集中在 ETF 股本缺口与监控阈值调整；拆分比率解析已修复，可在此基础上编写历史补数脚本，并加入上述空值/异常监控。

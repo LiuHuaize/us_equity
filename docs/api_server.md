@@ -13,6 +13,7 @@
 
 - 环境变量：
   - `PGHOST` / `PGPORT` / `PGDATABASE` / `PGUSER` / `PGPASSWORD`
+  - `PGPOOL_MIN_SIZE` / `PGPOOL_MAX_SIZE`：可选，控制 asyncpg 连接池大小（默认 1/5）。
   - `API_AUTH_TOKEN`：可选，若设置则所有请求必须携带 `X-API-Token` 头。
   - `ETF_DEFAULT_RETURN_YEARS`：可选，控制统计接口默认回溯的年度数量（默认 10）。
   - `ETF_DEFAULT_BENCHMARK`：可选，累计收益对比接口的默认基准，默认为 `SPY.US`。

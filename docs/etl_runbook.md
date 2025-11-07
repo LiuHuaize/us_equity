@@ -16,7 +16,7 @@
 | S6 QA 验证 | `mart_daily_quotes` | 随机抽样 50 条与原始接口对照 | QA 报告 | 记录差异并修复 | 如差异重大 → 回滚对应日期数据并重算 |
 
 ### 1.2 具体执行建议
-- **进度记录**：`etl_job_status` 增加 `history_symbols` 子任务（记录当前 symbol 与执行阶段）。
+- **进度记录**：`scripts.auto_backfill` 默认在 `state/backfill_progress.json` 记录断点，可配合 `etl_job_status` 新增 `history_symbols` 子任务（记录当前 symbol 与执行阶段）。
 - **节流策略**：控制每秒不超过 5 个请求，批量接口间隔 0.5s，单个 symbol 历史抓取间隔 0.1s。
 - **数据落地**：对于历史大批量，可分批 `INSERT`（1,000 行/批）。必要时使用 `COPY` 提升速度。
 - **重跑**：历史补数允许多次执行，采用 `UPSERT` 确保重复写入不会产生冲突。
@@ -41,9 +41,11 @@
 > **标的范围**：历史补数与日终流程同时拉取股票与 ETF，接口返回的其他类型会保留下来，由监控提示缺失指标或再做人工判断。
 
 ### 1.4 执行脚本
-- 历史补数脚本：`python -m scripts.backfill --exchange NASDAQ --start 2014-01-01 --end 2024-12-31 --limit 100`
-  - 支持 `--symbols` 指定列表、`--sleep` 控制节流、自动解析拆分比例并推导 ETF 股本（缺失时在日志中提示）。
-- 批量导入后使用 `scripts.etl_loaders.log_null_metrics` 自动输出空值统计，允许首日 `volume_ratio` 为 1 条 NULL。
+- 批量回填：`python -m scripts.auto_backfill --exchange NASDAQ --exchange NYSE --start 2014-01-01 --end 2024-12-31 --sleep 0.2`
+  - 支持 `--retry-failed`、`--limit`、`--reset-progress` 等参数，默认记录进度并在失败后继续其他 symbol。
+- 精准补数：`python -m scripts.backfill --exchange NASDAQ --symbols AAPL.US,MSFT.US --start 2020-01-01 --end 2024-12-31`
+  - 适合小范围重跑或验证；与批量脚本共享相同的写库逻辑。
+- 执行完毕后，可通过 `python -m scripts.daily_update --limit-symbols 50 --refresh-fundamentals` 做抽样回归测试，并使用 `scripts.etl_loaders.log_null_metrics`（在 `psql` 或 Python REPL 中调用）检查空值统计，首日 `volume_ratio` 允许保留 1 条 NULL。
 
 ## 2. 日终增量流程（日常）
 
@@ -57,16 +59,22 @@
 | D4 指标刷新 | 17:10 | 综合 `stg_*` 数据 | 更新 `mart_daily_quotes` 并调用 `refresh_mart_etf_periodic_returns` | 随机抽样当日 20 条校验涨跌幅、换手等；对比最近一年年度/月度收益 | 若空值异常增长 → 在日志提示并保留旧值 |
 | D5 状态记录 | 17:15 | — | 更新 `etl_job_status` (`daily_update`, `ALL`) | 写入执行耗时、成功数、警告数 | 若写入失败需人工检查数据库连接 |
 
-**脚本示例**：`python -m scripts.daily_update --refresh-fundamentals --lookback-days 90`
-- 支持 `--limit-symbols` 用于抽样测试、`--skip-dividends` 加速调试。
-- 脚本会对未入库的标的自动抓取 Fundamentals，解析拆分比率，并结合监控规则忽略首日 `volume_ratio` 的 NULL。
+- **`./scripts/run_daily_update.sh`**：单次执行入口，内置 `RETRY_ATTEMPTS`（默认 3 次）、`RETRY_DELAY_SECONDS`（默认 300s），支持 `ONLY_KNOWN_SYMBOLS=true`、`ASSET_TYPES="Common Stock,ETF"` 等环境变量；可传入日期参数精准补跑。
+- **`./scripts/daily_update_schedule.sh`**（可选）：若需要“快速行情 + 全量”双阶段，可使用该脚本，默认 fast 阶段跳过分红、full 阶段全量，延迟由 `SECOND_RUN_DELAY_SECONDS` 控制。
 
 ### 2.2 Cron 与日志
 
 | 任务 | Cron 表达式 | 环境变量 | 日志文件 |
 | --- | --- | --- | --- |
-| `daily_update.py` | `45 16 * * 1-5 TZ=America/New_York` | `.env`（API、PG） | `/var/log/eodhd/daily_update.log` |
-| `weekly_fundamentals.py`（可选） | `0 9 * * 6 TZ=America/New_York` | 同上 | `/var/log/eodhd/weekly_fundamentals.log` |
+| 收盘后 T+2h 全量跑 | `0 18 * * 1-5 TZ=America/New_York` | `ONLY_KNOWN_SYMBOLS=true ASSET_TYPES="Common Stock,ETF"`（可叠加其他环境变量） | `/var/log/eodhd/daily_update.log` |
+| 周末股本专项刷新 | `0 9 * * 6 TZ=America/New_York` | `LOOKBACK_DAYS=0 SKIP_DIVIDENDS=true`（可额外传递 `TARGET_DATE`） | `/var/log/eodhd/weekly_fundamentals.log` |
+| 历史补数（示例） | `0 3 * * 0 TZ=America/New_York` | `python -m scripts.auto_backfill ...` | `/var/log/eodhd/history_backfill.log` |
+
+示例 crontab：
+
+```
+0 18 * * 1-5 TZ=America/New_York ONLY_KNOWN_SYMBOLS=true ASSET_TYPES="Common Stock,ETF" /root/us_equity/scripts/run_daily_update.sh >> /var/log/eodhd/daily_update.log 2>&1
+```
 
 > 建议在脚本中使用 `logging` 模块输出 INFO/ERROR，并配合 `logrotate` 管理日志文件大小。
 

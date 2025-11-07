@@ -2,6 +2,7 @@ import type {
   EtfPerformanceSeries,
   EtfReturnSeries,
   EtfReturnStats,
+  IndustryGroup,
   PerformanceInterval
 } from '../types'
 
@@ -70,4 +71,37 @@ export async function fetchEtfPerformance(
     params.benchmark = benchmark
   }
   return request<EtfPerformanceSeries>(`/api/etfs/${encodedSymbol}/performance`, params)
+}
+
+export interface IndustryQuery {
+  sector?: string
+  industry?: string
+  includeEtfs?: boolean
+  minStockCount?: number
+  skipUncategorized?: boolean
+}
+
+export async function fetchIndustryGroups(params?: IndustryQuery): Promise<IndustryGroup[]> {
+  let query: QueryParams | undefined
+
+  if (params) {
+    query = {}
+    if (params.sector) {
+      query.sector = params.sector
+    }
+    if (params.industry) {
+      query.industry = params.industry
+    }
+    if (params.includeEtfs !== undefined) {
+      query.includeEtfs = params.includeEtfs ? 'true' : 'false'
+    }
+    if (params.minStockCount !== undefined) {
+      query.minStockCount = params.minStockCount
+    }
+    if (params.skipUncategorized !== undefined) {
+      query.skipUncategorized = params.skipUncategorized ? 'true' : 'false'
+    }
+  }
+
+  return request<IndustryGroup[]>('/api/industries', query)
 }

@@ -13,6 +13,8 @@ import type {
   OverlapRanking
 } from './types'
 import { EtfDetailPage } from './pages/EtfDetailPage'
+import { IndustryDetailPage } from './pages/IndustryDetailPage'
+import { IndustryExplorerPage } from './pages/IndustryExplorerPage'
 
 const DATASET_CONFIGS: DatasetConfig[] = [
   {
@@ -138,6 +140,14 @@ function App() {
           >
             双榜重合
           </NavLink>
+          <NavLink
+            to="/industries"
+            className={({ isActive }) =>
+              isActive ? 'top-bar__link top-bar__link--active' : 'top-bar__link'
+            }
+          >
+            行业板块
+          </NavLink>
         </nav>
       </header>
 
@@ -147,6 +157,8 @@ function App() {
           <Route path="/five-year" element={<DatasetPage datasetId="fiveYear" />} />
           <Route path="/ten-year" element={<DatasetPage datasetId="tenYear" />} />
           <Route path="/overlap" element={<DatasetPage datasetId="overlap" />} />
+          <Route path="/industries" element={<IndustryExplorerPage />} />
+          <Route path="/industries/:sector/:industry" element={<IndustryDetailPage />} />
           <Route path="/etf/:symbol" element={<EtfDetailPage />} />
           <Route path="*" element={<Navigate to="/five-year" replace />} />
         </Routes>

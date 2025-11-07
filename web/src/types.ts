@@ -95,3 +95,20 @@ export interface EtfPerformanceSeries {
   endDate: string
   points: EtfPerformancePoint[]
 }
+
+export interface IndustrySecurity {
+  symbol: string
+  name?: string
+  exchange?: string
+  assetType?: string
+}
+
+export interface IndustryGroup {
+  sector: string
+  industry: string
+  totalSymbols: number
+  etfCount: number
+  stockCount: number
+  otherCount: number
+  securities: IndustrySecurity[]
+}

@@ -65,3 +65,24 @@ class PerformanceSeries(BaseModel):
     start_date: date = Field(alias="startDate")
     end_date: date = Field(alias="endDate")
     points: List[PerformancePoint]
+
+
+class IndustrySecurity(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
+    symbol: str
+    name: Optional[str] = None
+    exchange: Optional[str] = None
+    asset_type: Optional[str] = Field(default=None, alias="assetType")
+
+
+class IndustryGroup(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    sector: str
+    industry: str
+    total_symbols: int = Field(alias="totalSymbols")
+    etf_count: int = Field(alias="etfCount")
+    stock_count: int = Field(alias="stockCount")
+    other_count: int = Field(alias="otherCount")
+    securities: List[IndustrySecurity]

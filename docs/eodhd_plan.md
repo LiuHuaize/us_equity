@@ -6,10 +6,10 @@
 - 收盘后执行增量更新，保证指标字段在日级别准时刷新。
 
 ## 2. 技术栈与运行环境
-- **编程语言**: Python 3（requests、pandas、sqlalchemy、psycopg2）。
+- **编程语言**: Python 3（核心依赖：`requests`、`tenacity`、`psycopg2-binary`、`python-dotenv`、`pandas`、`sqlalchemy`）。
 - **数据库**: PostgreSQL 15+。
 - **调度**: Linux `cron`（本机定时触发脚本）。
-- **依赖管理**: `pipenv` 或 `poetry`（视团队习惯选择其一）。
+- **依赖管理**: 推荐使用 `python -m venv .venv && source .venv/bin/activate` 创建虚拟环境，并通过 `pip install -r requirements.txt` 或直接安装上述依赖；敏感配置统一放在 `.env`（见仓库根目录示例）。
 
 ## 3. 数据源与 API
 
@@ -51,7 +51,7 @@
    - 对比随机样本与 EODHD 官网或其他数据源，确认数据正确性。
 
 ## 5. 日终增量流程
-1. **触发时间**: 纽约时间 16:45（北京时间 05:45/06:45 视夏令时）；cron 执行 `update_daily.py`。  
+1. **触发时间**: 纽约时间 16:45（北京时间 05:45/06:45 视夏令时）；cron 执行 `python -m scripts.daily_update`。  
 2. **批量行情更新**: 调用 `eod-bulk-last-day/US` 获取当日所有 symbol 行情，先 upsert 至 `stg_eod_quotes`，再刷新 `mart_daily_quotes`。  
 3. **基本面轮询**:  
    - 针对当天有交易的 symbol（或全量）按需查询 `fundamentals`，upsert 至 `stg_fundamentals`。  
@@ -181,7 +181,7 @@
 | 主键 | `primary key (symbol, trade_date)` | 唯一约束。 |
 | 索引 | `index (trade_date)` | 支撑日期范围查询。 |
 
-### 7.5 `etl_job_status`
+### 7.6 `etl_job_status`
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |
 | `job_name` | `varchar(50)` | 任务名称（如 `history_load`, `daily_update`）。 |
@@ -199,6 +199,7 @@ project_root/
 │   └── eodhd_plan.md
 ├── scripts/
 │   ├── api_client.py
+│   ├── auto_backfill.py
 │   ├── backfill.py
 │   ├── config.py
 │   ├── daily_update.py
@@ -214,11 +215,11 @@ project_root/
 
 ## 9. 调度方案（cron）
 - 历史补数（一次性）：  
-  `0 2 * * * /usr/bin/python3 /path/to/scripts/fetch_history.py >> /var/log/eodhd_history.log 2>&1`
+  `0 2 * * * cd /path/to/us_equity && /usr/bin/python3 -m scripts.backfill --start 2014-01-01 --exchange NASDAQ >> /var/log/eodhd_history.log 2>&1`
 - 每日收盘增量：  
-  `45 16 * * 1-5 TZ=America/New_York /usr/bin/python3 /path/to/scripts/update_daily.py >> /var/log/eodhd_daily.log 2>&1`
+  `45 16 * * 1-5 TZ=America/New_York cd /path/to/us_equity && /usr/bin/python3 -m scripts.daily_update --refresh-fundamentals >> /var/log/eodhd_daily.log 2>&1`
 - 每周基础信息刷新（示例）：  
-  `0 3 * * 6 /usr/bin/python3 /path/to/scripts/fetch_fundamentals.py >> /var/log/eodhd_fundamentals.log 2>&1`
+  `0 3 * * 6 TZ=America/New_York cd /path/to/us_equity && /usr/bin/python3 -m scripts.daily_update --refresh-fundamentals --skip-dividends --lookback-days 0 >> /var/log/eodhd_fundamentals.log 2>&1`
 
 ## 10. 里程碑计划
 1. **第 1 周**: 环境搭建、PostgreSQL 初始化、API client 与基础脚手架。  
