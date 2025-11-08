@@ -1,4 +1,5 @@
 .venv/
 .env
+web/.env.production
 __pycache__/
 *.pyc

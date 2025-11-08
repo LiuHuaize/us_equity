@@ -133,3 +133,60 @@
 - **请求节奏**：年度收益与统计指标在进入页面后即加载；月度收益在用户切换 Tab 时触发，避免首屏等待过长。所有请求自动附带 `X-API-Token` 头（如启用）。
 - **数据回显**：收益表按 `period_key` 倒序展示，字段含总收益、复利收益、最大回撤、波动率与交易日。统计卡片显示总收益、平均年化、最大回撤、平均波动率及时间范围。
 - **错误处理**：接口异常时直接在页面提示失败信息，方便排查。可在浏览器 DevTools 确认请求 URL 与返回码，必要时通过 `docs/api_server.md` 中 SQL 样例手动校验数据库。
+
+## 11. 组合对比页面
+
+- **数据来源**：`scripts/etf_backtest.py` 在每日/回测后写出 `outputs/etf_backtest_summary.csv` 与 `outputs/etf_backtest_nav.csv`。通过 `cp outputs/etf_backtest_summary.csv web/public/data/portfolio_summary.csv` 与 `cp outputs/etf_backtest_nav.csv web/public/data/portfolio_nav.csv` 同步至前端静态目录。
+- **页面入口**：导航新增 “组合对比”，路由 `/portfolio-compare`。默认展示 10 年榜前 10 与 5 年榜前 10 两个组合，可继续在 CSV 中扩展更多组合。
+- **展示内容**：
+  - 顶部卡片显示每个组合的累计/年化收益、年化波动、最大回撤，并附 Sharpe/Calmar。
+  - 指标对比表按关键指标列出两组合与差值。
+  - 净值/回撤图待接入 Recharts（目前为占位文案，后续替换为 nav CSV 渲染的折线图）。
+  - 文本结论总结收益 vs 风险特征，便于业务快速解读。
+- **开发注意**：若回测脚本输出文件名有变更，需同步更新 `web/src/pages/PortfolioComparePage.tsx` 中的 `SUMMARY_CSV_PATH` 与 `NAV_CSV_PATH` 常量。
+
+## 12. 前后端部署流程
+
+### 12.1 FastAPI 服务
+
+- **环境变量**：`/root/us_equity/.env` 除数据库与 API token 外，需设置 `API_CORS_ORIGINS=http://173.212.198.166,http://localhost:5173,http://127.0.0.1:5173`（按需追加域名），保证前端可跨域请求。
+- **systemd 服务**：创建 `/etc/systemd/system/etf-api.service`：
+
+  ```ini
+  [Unit]
+  Description=ETF FastAPI Service
+  After=network.target
+
+  [Service]
+  User=root
+  Group=root
+  WorkingDirectory=/root/us_equity
+  EnvironmentFile=/root/us_equity/.env
+  ExecStart=/root/us_equity/.venv/bin/uvicorn api.main:app --host 0.0.0.0 --port 8080
+  Restart=always
+  RestartSec=5
+
+  [Install]
+  WantedBy=multi-user.target
+  ```
+
+- **启停命令**：`sudo systemctl daemon-reload && sudo systemctl enable --now etf-api`；后续更新代码或 `.env` 后执行 `sudo systemctl restart etf-api`。若端口绑定失败，先 `sudo lsof -i :8080` 清理残留进程。
+- **联通性校验**：`curl -H "X-API-Token: $API_AUTH_TOKEN" http://173.212.198.166:8080/api/industries?minStockCount=1` 应返回 `200`；若返回 `401`，检查 token 是否与 `.env`、`web/.env.production` 一致。
+
+### 12.2 静态前端
+
+- **生产环境变量**：在 `web/.env.production` 写入：
+
+  ```bash
+  VITE_API_BASE_URL=http://173.212.198.166:8080
+  VITE_API_TOKEN=<同 API_AUTH_TOKEN>
+  ```
+
+- **构建与发布**：
+  1. `. .venv/bin/activate && cd web && npm run build`
+  2. `sudo rsync -a --delete /root/us_equity/web/dist/ /var/www/web/`
+  3. `sudo systemctl reload nginx`
+
+- **验证**：`curl -I http://173.212.198.166/` 返回 `HTTP/1.1 200 OK`；打开浏览器检查 “行业板块” 页是否加载，若仍空白，按 F12 看 `/api/industries` 响应码以定位问题。
+
+- **更新节奏**：每次前端改动后执行 “build → rsync → reload Nginx”；每次 API 改动后执行 `sudo systemctl restart etf-api`。建议配合 `letsencrypt`/`certbot` 配置 HTTPS，并在防火墙中仅放通 80/443/8080 必要端口。

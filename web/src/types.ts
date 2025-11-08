@@ -112,3 +112,27 @@ export interface IndustryGroup {
   otherCount: number
   securities: IndustrySecurity[]
 }
+
+export interface PortfolioSummary {
+  key: string
+  label: string
+  startDate: string
+  endDate: string
+  tradingDays: number
+  cumulativeReturn: number
+  annualizedReturn: number
+  annualizedVolatility: number
+  maxDrawdown: number
+  maxDrawdownStart: string
+  maxDrawdownEnd: string
+  sharpeRatio: number | null
+  calmarRatio: number | null
+}
+
+export interface PortfolioNavPoint {
+  portfolio: string
+  tradeDate: string
+  nav: number
+  dailyReturn: number | null
+  drawdown: number
+}

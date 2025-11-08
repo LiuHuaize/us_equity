@@ -22,6 +22,9 @@ const compactNumberFormatter = new Intl.NumberFormat('zh-CN', {
 })
 
 export function formatPercent(value: number): string {
+  if (!Number.isFinite(value)) {
+    return '-'
+  }
   return percentFormatter.format(value)
 }
 

@@ -15,6 +15,7 @@ import type {
 import { EtfDetailPage } from './pages/EtfDetailPage'
 import { IndustryDetailPage } from './pages/IndustryDetailPage'
 import { IndustryExplorerPage } from './pages/IndustryExplorerPage'
+import { PortfolioComparePage } from './pages/PortfolioComparePage'
 
 const DATASET_CONFIGS: DatasetConfig[] = [
   {
@@ -148,6 +149,14 @@ function App() {
           >
             行业板块
           </NavLink>
+          <NavLink
+            to="/portfolio-compare"
+            className={({ isActive }) =>
+              isActive ? 'top-bar__link top-bar__link--active' : 'top-bar__link'
+            }
+          >
+            组合对比
+          </NavLink>
         </nav>
       </header>
 
@@ -159,6 +168,7 @@ function App() {
           <Route path="/overlap" element={<DatasetPage datasetId="overlap" />} />
           <Route path="/industries" element={<IndustryExplorerPage />} />
           <Route path="/industries/:sector/:industry" element={<IndustryDetailPage />} />
+          <Route path="/portfolio-compare" element={<PortfolioComparePage />} />
           <Route path="/etf/:symbol" element={<EtfDetailPage />} />
           <Route path="*" element={<Navigate to="/five-year" replace />} />
         </Routes>
