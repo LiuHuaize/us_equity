@@ -66,17 +66,40 @@
 
 | 任务 | Cron 表达式 | 环境变量 | 日志文件 |
 | --- | --- | --- | --- |
-| 收盘后 T+2h 全量跑 | `0 18 * * 1-5 TZ=America/New_York` | `ONLY_KNOWN_SYMBOLS=true ASSET_TYPES="Common Stock,ETF"`（可叠加其他环境变量） | `/var/log/eodhd/daily_update.log` |
+| 收盘后 T+2h 全量跑 | `0 18 * * 1-5 CRON_TZ=America/New_York` | `ONLY_KNOWN_SYMBOLS=true ASSET_TYPES="Common Stock,ETF"`（如需刷新基本面可额外设置 `REFRESH_FUNDAMENTALS=true`） | `logs/daily_update.log` |
 | 周末股本专项刷新 | `0 9 * * 6 TZ=America/New_York` | `LOOKBACK_DAYS=0 SKIP_DIVIDENDS=true`（可额外传递 `TARGET_DATE`） | `/var/log/eodhd/weekly_fundamentals.log` |
 | 历史补数（示例） | `0 3 * * 0 TZ=America/New_York` | `python -m scripts.auto_backfill ...` | `/var/log/eodhd/history_backfill.log` |
 
 示例 crontab：
 
 ```
-0 18 * * 1-5 TZ=America/New_York ONLY_KNOWN_SYMBOLS=true ASSET_TYPES="Common Stock,ETF" /root/us_equity/scripts/run_daily_update.sh >> /var/log/eodhd/daily_update.log 2>&1
+CRON_TZ=America/New_York
+0 18 * * 1-5 ONLY_KNOWN_SYMBOLS=true ASSET_TYPES="Common Stock,ETF" /root/us_equity/scripts/run_daily_update.sh
 ```
 
 > 建议在脚本中使用 `logging` 模块输出 INFO/ERROR，并配合 `logrotate` 管理日志文件大小。
+
+### 2.3 手动触发与验证
+
+1. **命令行触发**  
+   ```
+   ONLY_KNOWN_SYMBOLS=true ASSET_TYPES="Common Stock,ETF" LIMIT_SYMBOLS=20 \
+   /root/us_equity/scripts/run_daily_update.sh
+   ```
+   - `LIMIT_SYMBOLS` 便于快速验证流程；需要全量跑时移除该变量。
+   - 若只做健康检查，可设置 `DAILY_UPDATE_DRY_RUN=true`，脚本会跳过 Python 执行但仍输出触发/心跳日志。
+2. **日志检查**  
+   - 查看 `logs/daily_update.log` 中的 `Symbols fetched: <count>`。正常收盘后应 ≥ 40,000；若出现 “No symbols returned from bulk endpoint.”，通常是：
+     - 目标日期尚未收盘（`--date` 指向未来交易日）。  
+     - 环境变量覆盖导致 `TARGET_DATE` 推导有误。  
+     - EODHD 接口暂未产出数据，需要延迟或重试。  
+   - 若脚本提前返回或重试次数耗尽，需人工重跑或调整 `RETRY_ATTEMPTS`、`RETRY_DELAY_SECONDS`。
+3. **数据验证**  
+   - 抽查数据库中 `mart_daily_quotes` 最新日期的行数与上一交易日对比；或查看日志里 `Daily update completed metrics=...` 输出，确保 `refresh_mart_daily_quotes`、`log_null_metrics` 已执行。  
+   - 如无法连接数据库，可暂以日志指标判断成功，必要时再通过 SQL 进行 spot-check。
+4. **部署提示**  
+   - 正式 cron 必须配置 `CRON_TZ=America/New_York` 并至少设置 `ONLY_KNOWN_SYMBOLS`、`ASSET_TYPES` 等核心环境变量，确保夏令时切换无感。  
+   - 上线前先执行一次 `DAILY_UPDATE_DRY_RUN=true`，确认 `.env`、虚拟环境及日志路径无误后再取消 dry-run 进行正式跑批。
 
 ## 3. 验证与监控
 

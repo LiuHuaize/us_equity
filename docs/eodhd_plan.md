@@ -51,8 +51,9 @@
    - 对比随机样本与 EODHD 官网或其他数据源，确认数据正确性。
 
 ## 5. 日终增量流程
-1. **触发时间**: 纽约时间 16:45（北京时间 05:45/06:45 视夏令时）；cron 执行 `python -m scripts.daily_update`。  
+1. **触发时间**: 纽约时间 18:00（收盘后约 2 小时，自动适配夏令时）；通过 `scripts/run_daily_update.sh` 触发可复用脚本内的 `TZ="America/New_York"` 推导逻辑，避免在尚未收盘时传入未来日期导致批量接口返回空数组。若需健康检查可先设置 `DAILY_UPDATE_DRY_RUN=true`，观察日志与心跳后再取消。  
 2. **批量行情更新**: 调用 `eod-bulk-last-day/US` 获取当日所有 symbol 行情，先 upsert 至 `stg_eod_quotes`，再刷新 `mart_daily_quotes`。  
+   - 如在收盘前或空交易日触发，`fetch_bulk_quotes` 会返回空列表并记录 WARN，需等待下一时段或手动传入可用日期重跑。  
 3. **基本面轮询**:  
    - 针对当天有交易的 symbol（或全量）按需查询 `fundamentals`，upsert 至 `stg_fundamentals`。  
    - 建议按交易所分批（每日一批）刷新，以降低请求量，并同步最新股本/估值至 `mart_daily_quotes`。  
